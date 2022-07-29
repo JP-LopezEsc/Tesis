@@ -1,0 +1,62 @@
+---
+title: "Actualizacion de ecuaciones univariada"
+output: pdf_document
+date: "2022-07-25"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(MASS)
+```
+
+```{r}
+#La base de datos freeny tiene la siguiente estructura:
+head(freeny)
+```
+
+
+
+```{r}
+#A. Posterior en t=19
+set.seed(1)
+m19 <- c(8, 0.35, -0.27)
+C19 <- matrix(c(0.00002, 0.00001, -0.00002, 0.00001, 0.00004, -0.00001, -0.00002, 
+                -0.00001, 0.00005), 
+              ncol = 3)
+theta19_posterior <- mvrnorm(1, mu = m19, Sigma = C19)
+theta19_posterior
+```
+
+
+```{r}
+G20 <- matrix(c(1.05, 0, 0, 0, 1, 0, 0, 0, 1), ncol=3)
+W20 <- matrix(c(0.00001, 0, 0, 0, 0.0001, -0.00001, 0, -0.00001, 0.00005), ncol=3)
+#B. Priori en t=20
+a20 <- G20 %*% m19
+R20 <- G20 %*% C19 %*% t(G20) + W20
+theta20_priori <- mvrnorm(1, mu = a20, Sigma = R20)
+theta20_priori
+```
+
+```{r}
+freeny[20,]
+F20 <- c(1, 6.06093, 4.51018) #El 1 es para agregar el intercepto
+#C. Pronóstico a un periodo.
+f20 <- t(F20) %*% a20
+V20 <- 0.002
+Q20 <- t(F20) %*% R20 %*% F20 + V20
+Y20 <- rnorm(1, mean = f20, sd = sqrt(Q20)) 
+Y20                                           
+
+```
+
+```{r}
+#D. Posterior en t=20
+A20 = R20 %*% F20 %*% solve(Q20)
+e20 = Y20-f20
+m20 = a20 + A20 %*% e20
+C20 = R20 - A20 %*% Q20 %*% t(A20)
+theta20_posterior <- mvrnorm(1, mu = m20, Sigma = C20)
+```
+
