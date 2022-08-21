@@ -3,11 +3,13 @@ title: "Actualizacion de ecuaciones univariada"
 output: pdf_document
 date: "2022-07-25"
 ---
+\fontsize{15}{15}
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(MASS)
+options(digits=4)
 ```
 
 ```{r}
@@ -17,46 +19,108 @@ head(freeny)
 
 
 
+
 ```{r}
 #A. Posterior en t=19
-set.seed(1)
 m19 <- c(8, 0.35, -0.27)
 C19 <- matrix(c(0.00002, 0.00001, -0.00002, 0.00001, 0.00004, -0.00001, -0.00002, 
-                -0.00001, 0.00005), 
-              ncol = 3)
-theta19_posterior <- mvrnorm(1, mu = m19, Sigma = C19)
-theta19_posterior
-```
+                -0.00001, 0.00005), ncol = 3)
 
-
-```{r}
-G20 <- matrix(c(1.05, 0, 0, 0, 1, 0, 0, 0, 1), ncol=3)
+#Valores conocidos de G20 y W20
+G20 <- matrix(c(1.05, 0, 0, 0, 1.02, 0, 0, 0, 0.99), ncol=3)
 W20 <- matrix(c(0.00001, 0, 0, 0, 0.0001, -0.00001, 0, -0.00001, 0.00005), ncol=3)
-#B. Priori en t=20
+
+#B. Priori de parámetros en t=20
 a20 <- G20 %*% m19
 R20 <- G20 %*% C19 %*% t(G20) + W20
-theta20_priori <- mvrnorm(1, mu = a20, Sigma = R20)
-theta20_priori
+a20
+R20
 ```
 
 ```{r}
 freeny[20,]
-F20 <- c(1, 6.06093, 4.51018) #El 1 es para agregar el intercepto
+F20 <- c(1, 6.06093, 4.51018) #Variables explicativas en t=20. El 1 es para
+                              #agregar el intercepto
+V20 <- 0.002
+
 #C. Pronóstico a un periodo.
 f20 <- t(F20) %*% a20
-V20 <- 0.002
 Q20 <- t(F20) %*% R20 %*% F20 + V20
-Y20 <- rnorm(1, mean = f20, sd = sqrt(Q20)) 
-Y20                                           
-
+f20
+Q20
 ```
 
+
+
 ```{r}
+c(qnorm(0.025, mean = f20, sd = sqrt(Q20)), qnorm(0.975, mean = f20, 
+                                                  sd = sqrt(Q20)))
+```
+
+
+```{r}
+#Valor observado de Y20:
+Y20 <- 9.31378
 #D. Posterior en t=20
 A20 = R20 %*% F20 %*% solve(Q20)
 e20 = Y20-f20
 m20 = a20 + A20 %*% e20
 C20 = R20 - A20 %*% Q20 %*% t(A20)
-theta20_posterior <- mvrnorm(1, mu = m20, Sigma = C20)
+m20
+C20
 ```
+
+
+Pronosticos
+
+```{r}
+freeny[21,]
+
+#Valores iniciales. 
+#m20 y C20 se definieron en el ejemplo pasado
+a20_0 <- m20
+R20_0 <- C20
+
+#k = 1
+#Valores conocidos de F21, G21, V21 y W21
+F21 <- c(1, 6.071, 4.504)
+G21 <- matrix(c(1.01, 0, 0, 0, 1, 0, 0, 0, 0.98), ncol=3)
+V21 <- 0.001
+W21 <- matrix(c(0.00001, 0, 0, 0, 0.0001, -0.00001, 0, -0.00001, 0.00005), ncol=3)
+
+#Distribución de estados en t=21
+a20_1 <- G21 %*% a20_0
+R20_1 <- G21 %*% R20_0 %*% t(G21) + W21
+
+#Distribución de pronóstico de Y21
+f20_1 <- t(F21) %*% a20_1
+Q20_1 <- t(F21) %*% R20_1 %*% F21 + V21
+f20_1
+Q20_1
+
+freeny[22,]
+#k = 2
+#Valores conocidos de F22, G22, V22 y W22
+F22 <- c(1, 6.08, 4.494)
+G22 <- matrix(c(1, 0, 0, 0, 1, 0, 0, 0, 0.99), ncol=3)
+V22 <- 0.002
+W22 <- matrix(c(0.00002, 0, 0, 0, 0.0001, -0.00001, 0, -0.00001, 0.00005), ncol=3)
+
+#Distribución de estados en t=22
+a20_2 <- G22 %*% a20_1
+R20_2 <- G22 %*% R20_1 %*% t(G22) + W22
+
+#Distribución de pronóstico de Y22
+f20_2 <- t(F22) %*% a20_1
+Q20_2 <- t(F22) %*% R20_1 %*% F22 + V22
+f20_2
+Q20_2
+
+#Covarianzas
+C20_1_1 <- R20_1
+C20_2_1 <- G22 %*% C20_1_1 #Covarianza entre theta22 y theta 21
+cov_Y22_Y21 <- t(F22) %*% C20_2_1 %*% F21
+cov_Y22_Y21
+```
+
 

@@ -14,9 +14,9 @@ Sys.setlocale(locale = "es_ES.UTF-8")
 ################################################################################
 
 datos_dinero <- readxl::read_excel("datos/billetes_monedas_publico.xlsx", 
-                                   range = "A18:B273") %>% 
+                                   range = "A18:B277") %>% 
   rename(fecha = 1, dinero = 2) %>% 
-  mutate(fecha = as.Date(fecha), dinero = dinero/1000) %>% 
+  mutate(fecha = as.Date(fecha), dinero = dinero/1000000) %>% 
   filter(fecha > '2009-06-01')
   
 
@@ -31,6 +31,6 @@ ggplot(datos_dinero, aes(fecha, dinero)) +
         axis.text.y = element_text(size = 20),
         axis.title = element_text(size = 22)) +
   xlab("Año") +
-  ylab("Dinero")
+  ylab("Circulación")
 
 ggsave(filename = "graphs/introduccion/1.1_dinero.png", width = 11.7, height = 6)

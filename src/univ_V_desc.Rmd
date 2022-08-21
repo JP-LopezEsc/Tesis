@@ -1,0 +1,63 @@
+---
+title: "Actualizacion de ecuacion V desconocida"
+output: pdf_document
+date: "2022-08-17"
+---
+\fontsize{15}{15}
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(LaplacesDemon)
+options(digits=4)
+```
+
+```{r}
+#A. Posterior en t=19
+m19 <- c(8, 0.35, -0.27)
+C19 <- matrix(c(0.00002, 0.00001, -0.00002, 0.00001, 0.00004, -0.00001, -0.00002, 
+                -0.00001, 0.00005), ncol = 3)
+
+#Valores conocidos de G20 y W20
+G20 <- matrix(c(1.05, 0, 0, 0, 1.02, 0, 0, 0, 0.99), ncol=3)
+W20 <- matrix(c(0.00001, 0, 0, 0, 0.0001, -0.00001, 0, -0.00001, 0.00005), ncol=3)
+
+#B. Priori de parámetros en t=20
+a20 <- G20 %*% m19
+R20 <- G20 %*% C19 %*% t(G20) + W20
+a20
+R20
+```
+
+
+
+```{r}
+freeny[20,]
+F20 <- c(1, 6.06093, 4.51018) #Variables explicativas en t=20. El 1 es para
+                              #agregar el intercepto
+S19 <- 0.002 # Estimación de V en T=19
+n19 <- 19.5 # Grados de libertad
+#C. Pronóstico a un periodo.
+f20 <- as.numeric(t(F20) %*% a20)
+Q20 <- as.numeric(t(F20) %*% R20 %*% F20 + S19)
+f20
+Q20
+```
+
+
+```{r}
+c(qst(0.025, nu = n19, mu = f20, sigma = sqrt(Q20)),
+  qst(0.975, nu = n19, mu = f20, sigma = sqrt(Q20)))
+```
+
+```{r}
+#Valor observado de Y20:
+Y20 <- 9.31378
+#D. Posterior en t=20
+A20 = R20 %*% F20 / Q20
+e20 = Y20-f20
+m20 = a20 + A20 %*% e20
+n20 = n19 + 1
+S20 = S19 + (S19/n20)*(e20^2/Q20-1)
+C20 = (S20/S19)*(R20-A20 %*% t(A20) * Q20)
+m20
+C20
+```
