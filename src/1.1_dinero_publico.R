@@ -22,6 +22,7 @@ datos_dinero <- readxl::read_excel("datos/billetes_monedas_publico.xlsx",
 
 ggplot(datos_dinero, aes(fecha, dinero)) +
   geom_line() +
+  geom_vline(xintercept = as.Date('2020-03-01'), color = 'red')+
   scale_x_date(date_breaks = "1 year",date_labels = "%Y", 
                limits = c(datos_dinero$fecha[1], 
                           datos_dinero$fecha[nrow(datos_dinero)]),
