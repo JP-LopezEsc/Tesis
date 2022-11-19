@@ -1,5 +1,5 @@
 library('MARSS')
-
+library('broom')
 ## load Nile flow data
 data(Nile, package = "datasets")
 ## define model list
@@ -53,7 +53,8 @@ dlm_1$states
 dlm_1$states.se
 dlm_1$ytT
 
-
+glance(dlm_1)
+MARSSkfas(dlm_1)
 
 ## get list of Kalman filter output
 kf_out <- MARSSkfss(dlm_1)

@@ -52,12 +52,43 @@ c(qst(0.025, nu = n19, mu = f20, sigma = sqrt(Q20)),
 #Valor observado de Y20:
 Y20 <- 9.31378
 #D. Posterior en t=20
-A20 = R20 %*% F20 / Q20
-e20 = Y20-f20
-m20 = a20 + A20 %*% e20
-n20 = n19 + 1
-S20 = S19 + (S19/n20)*(e20^2/Q20-1)
-C20 = (S20/S19)*(R20-A20 %*% t(A20) * Q20)
+A20 <- R20 %*% F20 / Q20
+e20 <- Y20-f20
+m20 <- a20 + A20 %*% e20
+n20 <- n19 + 1
+S20 <- S19 + (S19/n20)*(e20^2/Q20-1)
+C20 <- (S20/S19)*(R20-A20 %*% t(A20) * Q20)
 m20
 C20
 ```
+
+Distribuciones filtradas
+
+```{r}
+B19 <- C19 %*% t(G20) %*% solve(R20)
+a20_menos_1 <- m19 + B19 %*% (m20 - a20)
+R20_menos_1 <- C19 - B19 %*% (C20 - R20) %*% solve(B19)
+
+a20_menos_1
+
+S20/S19 * R20_menos_1
+```
+
+
+```{r}
+freeny[19,]
+```
+
+
+```{r}
+F19 <- c(1, 6.05563	, 4.53957) #Variables explicativas en t=19. El 1 es para
+                              #agregar el intercepto
+t(F19) %*% a20_menos_1
+
+S20/S19 * t(F19) %*% R20_menos_1 %*% F19
+```
+
+```{r}
+
+```
+
