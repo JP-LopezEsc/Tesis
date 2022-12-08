@@ -17,18 +17,22 @@ options(digits=4)
 head(freeny)
 ```
 
+```{r}
+#m19 <- c(-2.3, 2.3, -0.7)
+#G20 <- matrix(c(1.001, 0, 0, 0, 1, 0, 0, 0, 1), ncol=3)
+```
 
 
 
 ```{r}
 #A. Posterior en t=19
-m19 <- c(8, 0.35, -0.27)
-C19 <- matrix(c(0.00002, 0.00001, -0.00002, 0.00001, 0.00004, -0.00001, -0.00002, 
-                -0.00001, 0.00005), ncol = 3)
+m19 <- c(1.5, 1.8, -0.7)
+C19 <- matrix(c(0.00002, 0.00001, -0.00002, 0.00001, 0.00003, -0.00001, -0.00002, 
+                -0.00001, 0.00002), ncol = 3)
 
 #Valores conocidos de G20 y W20
-G20 <- matrix(c(1.05, 0, 0, 0, 1.02, 0, 0, 0, 0.99), ncol=3)
-W20 <- matrix(c(0.00001, 0, 0, 0, 0.0001, -0.00001, 0, -0.00001, 0.00005), ncol=3)
+G20 <- matrix(c(1.001, 0, 0, 0, 1, 0, 0, 0, 1), ncol=3)
+W20 <- matrix(c(0.00001, 0, 0, 0, 0.00001, -0.00001, 0, -0.00001, 0.00005), ncol=3)
 
 #B. Priori de parámetros en t=20
 a20 <- G20 %*% m19
@@ -41,7 +45,7 @@ R20
 freeny[20,]
 F20 <- c(1, 6.06093, 4.51018) #Variables explicativas en t=20. El 1 es para
                               #agregar el intercepto
-V20 <- 0.002
+V20 <- 0.00005
 
 #C. Pronóstico a un periodo.
 f20 <- t(F20) %*% a20
@@ -53,8 +57,7 @@ Q20
 
 
 ```{r}
-c(qnorm(0.025, mean = f20, sd = sqrt(Q20)), qnorm(0.975, mean = f20, 
-                                                  sd = sqrt(Q20)))
+c(qnorm(0.025, mean = f20, sd = sqrt(Q20)), qnorm(0.975, mean = f20,                                                 sd = sqrt(Q20)))
 ```
 
 
@@ -62,12 +65,122 @@ c(qnorm(0.025, mean = f20, sd = sqrt(Q20)), qnorm(0.975, mean = f20,
 #Valor observado de Y20:
 Y20 <- 9.31378
 #D. Posterior en t=20
-A20 = R20 %*% F20 %*% solve(Q20)
-e20 = Y20-f20
-m20 = a20 + A20 %*% e20
-C20 = R20 - A20 %*% Q20 %*% t(A20)
+A20 <- R20 %*% F20 %*% solve(Q20)
+e20 <- Y20-f20
+m20 <- a20 + A20 %*% e20
+C20 <- R20 - A20 %*% Q20 %*% t(A20)
 m20
 C20
+```
+
+
+Funcion para actualizar mas de un periodo
+
+```{r}
+datos_ej <- freeny %>% 
+  mutate(intercept = 1) %>% 
+  slice(20:n()) %>% 
+  dplyr::select(y, intercept, income.level, price.index)
+
+#Se asume que Gt, Vt y Wt son ctes conocidas para toda t.
+actualizacion <- function(datos, m0, C0, G, W, V){
+  mt_menos_1 <- m0
+  Ct_menos_1 <- C0
+  lista_at <- list()
+  lista_Rt <- list()
+  lista_ft <- list()
+  lista_Qt <- list()
+  lista_mt <- list()
+  lista_Ct <- list()
+  lista_CI <- list()
+  lista_CI_inf <- list()
+  lista_CI_sup <- list()
+  for(t in 1:length(datos$y)){
+    at <- G %*% mt_menos_1
+    Rt <- G %*% Ct_menos_1 %*% t(G) + W
+    Ft <- as.numeric(datos[t, 2:4])
+    ft <- t(Ft) %*% at
+    Qt <- t(Ft) %*% Rt %*% Ft + V
+    CI <- c(qnorm(0.025, mean = ft, sd = sqrt(Qt)), qnorm(0.975, mean = ft, 
+                                                              sd = sqrt(Qt)))
+    CI_inf <- CI[1]
+    CI_sup <- CI[2]
+    Yt <- datos[t,1]
+    At = Rt %*% Ft %*% solve(Qt)
+    et = Yt-ft
+    mt = at + At %*% et
+    Ct = Rt - At %*% Qt %*% t(At)
+    lista_at[[t]] <- at
+    lista_Rt[[t]] <- Rt
+    lista_ft[[t]] <- ft
+    lista_Qt[[t]] <- Qt
+    lista_CI[[t]] <- CI
+    lista_CI_inf[[t]] <- CI_inf
+    lista_CI_sup[[t]] <- CI_sup
+    lista_mt[[t]] <- mt
+    lista_Ct[[t]] <- Ct
+    mt_menos_1 <- mt
+    Ct_menos_1 <- Ct
+  }
+  return(list("at" = lista_at, "Rt" = lista_Rt, "ft" = lista_ft, 
+              "Qt" = lista_Qt, "CI" = lista_CI, "CI_inf" = lista_CI_inf, 
+              "CI_sup" = lista_CI_sup, "mt" = lista_mt, "Ct" = lista_Ct))
+}
+```
+
+```{r}
+lm(datos_ej, formula = y ~ income.level + price.index)
+```
+
+
+```{r}
+res_dlm <- actualizacion(datos_ej, m19, C19, G20, W20, V20)
+```
+
+
+```{r}
+df_graficas <- data.frame("fecha" = datos_ej %>% row.names(), "y_real" = datos_ej$y, 
+           "y_pronostico" = res_dlm$ft %>% unlist(), "CI_inf" = res_dlm$CI_inf %>% unlist(),
+           "CI_sup" = res_dlm$CI_sup %>% unlist()) %>% 
+  mutate(fecha = as.numeric(fecha))
+```
+
+```{r}
+ggplot(data = df_graficas, aes(x = fecha)) +
+  geom_point(aes(y = y_real, shape = "Observaciones")) +
+  geom_line(aes(y = y_pronostico, color = 'Pronósticos')) +
+  geom_line(aes(y = CI_inf), color = "blue", alpha = 0.3) +
+  geom_line(aes(y = CI_sup), color = "blue", alpha = 0.3) + 
+  geom_ribbon(aes(ymax = CI_sup, ymin = CI_inf, fill = 'Intervalo'), alpha = 0.3) +
+  theme_bw() +
+  scale_colour_manual(
+    name = "", values = c("Intervalo" = "transparent",
+                          "Pronósticos" = "black")) +
+  scale_fill_manual(
+    name = "",  values = c("Intervalo" = "blue",
+                           "Pronósticos" = "transparent")) +
+  theme(legend.position = "bottom") +
+  labs(shape = "") +
+  ylab('Ventas') +
+  xlab('Fecha')
+  
+```
+
+```{r}
+df_params <- data.frame(reduce(res_dlm$mt, cbind) %>% t(), fecha = df_graficas$fecha)  %>% 
+  rename(Intercepto = X1, Ingreso = X2, Precio = X3) %>% 
+  pivot_longer(names_to = "parametro", values_to = "valor", 
+               cols = c(Intercepto, Ingreso, Precio))
+```
+
+
+```{r}
+ggplot(df_params, aes(x=fecha, y = valor)) +
+  geom_line() +
+  facet_wrap(~parametro, nrow = 3, scales = "free") +
+  theme_bw()  +
+  ylab("Valor") +
+  xlab("Fecha")
 ```
 
 
@@ -84,9 +197,9 @@ R20_0 <- C20
 #k = 1
 #Valores conocidos de F21, G21, V21 y W21
 F21 <- c(1, 6.071, 4.504)
-G21 <- matrix(c(1.01, 0, 0, 0, 1, 0, 0, 0, 0.98), ncol=3)
-V21 <- 0.001
-W21 <- matrix(c(0.00001, 0, 0, 0, 0.0001, -0.00001, 0, -0.00001, 0.00005), ncol=3)
+G21 <- matrix(c(1.001, 0, 0, 0, 1, 0, 0, 0, 1), ncol=3)
+V21 <- 0.00005
+W21 <- matrix(c(0.00001, 0, 0, 0, 0.00001, -0.00001, 0, -0.00001, 0.00005), ncol=3)
 
 #Distribución de estados en t=21
 a20_1 <- G21 %*% a20_0
@@ -102,9 +215,9 @@ freeny[22,]
 #k = 2
 #Valores conocidos de F22, G22, V22 y W22
 F22 <- c(1, 6.08, 4.494)
-G22 <- matrix(c(1, 0, 0, 0, 1, 0, 0, 0, 0.99), ncol=3)
-V22 <- 0.002
-W22 <- matrix(c(0.00002, 0, 0, 0, 0.0001, -0.00001, 0, -0.00001, 0.00005), ncol=3)
+G22 <- matrix(c(1.001, 0, 0, 0, 1, 0, 0, 0, 1), ncol=3)
+V22 <- 0.00005
+W22 <- matrix(c(0.00001, 0, 0, 0, 0.00001, -0.00001, 0, -0.00001, 0.00005), ncol=3)
 
 #Distribución de estados en t=22
 a20_2 <- G22 %*% a20_1
@@ -123,4 +236,86 @@ cov_Y22_Y21 <- t(F22) %*% C20_2_1 %*% F21
 cov_Y22_Y21
 ```
 
+```{r}
+pronosticos <- function(datos, at_0, Rt_0, G, W, V){
+  at_k <- at_0
+  Rt_k <- Rt_0
+  lista_at_k <- list()
+  lista_Rt_k <- list()
+  lista_ft_k <- list()
+  lista_Qt_k <- list()
+  lista_CI_inf <- list()
+  lista_CI_sup <- list()
+  for(k in 1:length(datos$y)){
+    at_k <- G %*% at_k
+    Rt_k <- G %*% Rt_k %*% G + W
+    Ft <- as.numeric(datos[k, 2:4])
+    ft_k <- t(Ft) %*% at_k
+    Qt_k <- t(Ft) %*% Rt_k %*% Ft + V
+    CI <- c(qnorm(0.025, mean = ft_k, sd = sqrt(Qt_k)), 
+            qnorm(0.975, mean = ft_k,  sd = sqrt(Qt_k)))
+    CI_inf <- CI[1]
+    CI_sup <- CI[2]
+    lista_at_k[[k]] <- at_k
+    lista_Rt_k[[k]] <- Rt_k
+    lista_ft_k[[k]] <- ft_k
+    lista_Qt_k[[k]] <- Qt_k
+    lista_CI_inf[[k]] <- CI_inf
+    lista_CI_sup[[k]] <- CI_sup
+    
+  }
+  return(list("at_k" = lista_at_k, "Rt_k" = lista_Rt_k, "ft_k" = lista_ft_k, 
+              "Qt_k" = lista_Qt_k, "CI_inf" = lista_CI_inf, "CI_sup" = lista_CI_sup))
+}
+```
 
+```{r}
+pronos_dlm <- pronosticos(datos_ej, m20, C20, G20, W20, V20)
+```
+
+```{r}
+df_pronos <- data.frame("fecha" = datos_ej %>% row.names(), "y_real" = datos_ej$y, 
+           "y_pronostico" = pronos_dlm$ft_k %>% unlist(), 
+           "CI_inf" = pronos_dlm$CI_inf %>% unlist(),
+           "CI_sup" = pronos_dlm$CI_sup %>% unlist()) %>% 
+  mutate(fecha = as.numeric(fecha))
+```
+
+```{r}
+ggplot(data = df_pronos, aes(x = fecha)) +
+  geom_point(aes(y = y_real, shape = "Observaciones")) +
+  geom_line(aes(y = y_pronostico, color = 'Pronósticos')) +
+  geom_line(aes(y = CI_inf), color = "blue", alpha = 0.3) +
+  geom_line(aes(y = CI_sup), color = "blue", alpha = 0.3) + 
+  geom_ribbon(aes(ymax = CI_sup, ymin = CI_inf, fill = 'Intervalo'), alpha = 0.3) +
+  theme_bw() +
+  scale_colour_manual(
+    name = "", values = c("Intervalo" = "transparent",
+                          "Pronósticos" = "black")) +
+  scale_fill_manual(
+    name = "",  values = c("Intervalo" = "blue",
+                           "Pronósticos" = "transparent")) +
+  theme(legend.position = "bottom") +
+  labs(shape = "") +
+  ylab('Ventas') +
+  xlab('Fecha')
+  
+```
+
+
+```{r}
+df_params_pronos <- data.frame(reduce(pronos_dlm$at_k, cbind) %>% t(), fecha = df_pronos$fecha)  %>% 
+  rename(Intercepto = X1, Ingreso = X2, Precio = X3) %>% 
+  pivot_longer(names_to = "parametro", values_to = "valor", 
+               cols = c(Intercepto, Ingreso, Precio))
+```
+
+
+```{r}
+ggplot(df_params_pronos, aes(x=fecha, y = valor)) +
+  geom_line() +
+  facet_wrap(~parametro, nrow = 3, scales = "free") +
+  theme_bw()  +
+  ylab("Valor") +
+  xlab("Fecha")
+```
