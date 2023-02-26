@@ -14,7 +14,7 @@ Sys.setlocale(locale = "es_ES.UTF-8")
 ################################################################################
 
 datos_dinero <- readxl::read_excel("datos/billetes_monedas_publico.xlsx", 
-                                   range = "A18:B277") %>% 
+                                   range = "A18:B283") %>% 
   rename(fecha = 1, dinero = 2) %>% 
   mutate(fecha = as.Date(fecha), dinero = dinero/1000000) %>% 
   filter(fecha > '2009-06-01')

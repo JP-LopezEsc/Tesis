@@ -29,17 +29,17 @@ CUI_z <- matrix((CUI - mean(CUI))/sqrt(var(CUI)), nrow = 1)
 m <- dim(CUI_z)[1] + 1
 
 ## for process eqn
-B <- diag(m) ## 2x2; Identity
+B <- diag(m) ## 2x2; Identity #Es Gt
 U <- matrix(0, nrow = m, ncol = 1) ## 2x1; both elements = 0
-Q <- matrix(list(0), m, m) ## 2x2; all 0 for now
+Q <- matrix(list(0), m, m) ## 2x2; all 0 for now #Es Wt
 diag(Q) <- c("q.alpha", "q.beta") ## 2x2; diag = (q1,q2)
 
 ## for observation eqn
-Z <- array(NA, c(1, m, TT)) ## NxMxT; empty for now
+Z <- array(NA, c(1, m, TT)) ## NxMxT; empty for now #Es Ft transpuesta
 Z[1, 1, ] <- rep(1, TT) ## Nx1; 1's for intercept
 Z[1, 2, ] <- CUI_z ## Nx1; predictor variable
 A <- matrix(0) ## 1x1; scalar = 0
-R <- matrix("r") ## 1x1; scalar = r
+R <- matrix("r") ## 1x1; scalar = r # Es Vt
 
 ## only need starting values for regr parameters
 inits_list <- list(x0 = matrix(c(0, 0), nrow = m))
@@ -63,7 +63,7 @@ eta <- kf_out$xtt1
 ## ts of E(forecasts)
 fore_mean <- vector()
 for (t in 1:TT) {
-  browser()
+  #browser()
   fore_mean[t] <- Z[, , t] %*% eta[, t, drop = FALSE]
 }
 
@@ -77,3 +77,5 @@ for (t in 1:TT) {
   tZ <- matrix(Z[, , t], m, 1) ## transpose of Z
   fore_var[t] <- Z[, , t] %*% Phi[, , t] %*% tZ + R_est
 }
+
+fore_var
