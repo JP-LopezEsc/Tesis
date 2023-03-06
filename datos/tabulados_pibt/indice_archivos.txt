@@ -1,0 +1,15 @@
+﻿Índice de nombres y contenido de archivos
+
+PIBTR_2|Series originales|Serie retropolada reducida|Valores constantes a precios de 2013|Millones de pesos a precios de 2013
+PIBTR_3|Series originales|Serie retropolada reducida|Valores constantes a precios de 2013|Variación porcentual anual
+PIBT_2.xlsx|Series originales|Serie detallada|Valores constantes a precios de 2013|Millones de pesos a precios de 2013
+PIBT_3.xlsx|Series originales|Serie detallada|Valores constantes a precios de 2013|Variación porcentual anual 
+PIBT_5.xslx|Series originales|Serie detallada|Valores corrientes|Millones de pesos a precios corrientes 
+PIBT_6.xlsx|Series originales|Serie detallada|Valores corrientes|Variación porcentual anual 
+PIBT_7.xlsx|Series originales|Serie detallada|Valores corrientes|Estructura porcentual 
+PIBT_9.xlsx|Series originales|Serie detallada|Índice de precios implícitos|Índice base 2013=100 
+PIBT_10.xlsx|Series originales|Serie detallada|Índice de precios implícitos|Variación porcentual anual 
+
+
+
+

@@ -1,5 +1,5 @@
 ################################################################################
-## Título: DLM M0 vs cetes_182d
+## Título: DLM M0 vs cetes_28d
 
 ## Fecha: 24-02-2023
 ################################################################################
@@ -16,37 +16,32 @@ Sys.setlocale(locale = "es_ES.UTF-8")
 ##
 ################################################################################
 
-# Datos Cetes 182d ----------------------------------------------------------
+# Datos Cetes 28d ----------------------------------------------------------
 
-datos_cetes_182d <- read_rds('datos/variables/cetes_182d.rds')
+datos_cetes_28d <- read_rds('cache/variables/cetes_28d_trim.rds')
 
-ggplot(datos_cetes_182d, aes(fecha, cetes_182d)) +
+ggplot(datos_cetes_28d, aes(fecha, cetes_28d)) +
   geom_line() +
-  geom_vline(xintercept = as.Date('2020-03-01'), color = 'red')+
-  scale_x_date(date_breaks = "1 year",date_labels = "%Y", 
-               limits = c(datos_cetes_182d$fecha[1], 
-                          datos_cetes_182d$fecha[nrow(datos_cetes_182d)]),
-               expand = c(0.02,0)) +
+  geom_vline(xintercept = 2020.00, color = 'red')+
   theme_classic() +
   xlab("Año") +
   ylab("Rendimiento")
 
 # Datos efectivo --------------------------------------------------------------
 
-datos_efectivo <- read_rds('datos/variables/efectivo.rds')
+datos_efectivo <- read_rds('cache/variables/efectivo_trim.rds')
 
 #En teoría la correlación tendría que ser negativa
-cor(datos_efectivo$efectivo, datos_cetes_182d$cetes_182d)
+cor(datos_efectivo$efectivo, datos_cetes_28d$cetes_28d)
 
 
-ggplot(data = datos_efectivo, 
-       mapping = aes(x = month(fecha, label = TRUE), 
-                     y = efectivo))+
-  geom_point()+
-  geom_line(aes(group = factor(year(fecha)),
-                color = factor(year(fecha))))+
-  scale_color_discrete(name = "Year")+
-  xlab(label = "Month")
+
+ggplot(datos_efectivo, aes(fecha, efectivo)) +
+  geom_line() +
+  geom_vline(xintercept = 2020.00, color = 'red')+
+  theme_classic() +
+  xlab("Año") +
+  ylab("Circulación")
 
 ################################################################################
 ## Modelo 1: Actividad
@@ -59,9 +54,9 @@ TT <- length(datos_efectivo$efectivo)
 dat <- matrix(datos_efectivo$efectivo, nrow = 1)
 
 ## get predictor variable
-Cetes_182d <- matrix(datos_cetes_182d$cetes_182d, nrow=1)
+Cetes_28d <- matrix(datos_cetes_28d$cetes_28d, nrow=1)
 ## number of regr params (slope + intercept)
-m <- dim(Cetes_182d)[1] + 1
+m <- dim(Cetes_28d)[1] + 1
 
 ## for process eqn
 G <- diag(m) ## 2x2; Identity #Es Gt
@@ -72,12 +67,12 @@ diag(W) <- c("w.1", "w.2") ## 2x2; diag = (q1,q2)
 ## for observation eqn
 F <- array(NA, c(1, m, TT)) ## NxMxT; empty for now #Es Ft transpuesta
 F[1, 1, ] <- rep(1, TT) ## Nx1; 1's for intercept
-F[1, 2, ] <- Cetes_182d ## Nx1; predictor variable
+F[1, 2, ] <- Cetes_28d ## Nx1; predictor variable
 A <- matrix(0) ## 1x1; scalar = 0
 V <- matrix("v") ## 1x1; scalar = r # Es Vt
 
 ## only need starting values for regr parameters
-inits_list <- list(x0 = matrix(c(0, -5), nrow = m))
+inits_list <- list(x0 = matrix(c(500, -5), nrow = m))
 ## list of model matrices & vectors
 mod_list <- list(B = G, U = U, Q = W, Z = F, A = A, R = V)
 
@@ -133,8 +128,8 @@ ggplot(data = df_result, aes(x = fecha)) +
 
 
 df_params <- data.frame('fecha' = datos_efectivo$fecha, 'intercept' = theta_priori[1,], 
-                        'cetes_182d' = theta_priori[2,]) %>% 
-  pivot_longer(cols = c(intercept, cetes_182d), names_to = 'parametro', values_to = 'valor')
+                        'cetes_28d' = theta_priori[2,]) %>% 
+  pivot_longer(cols = c(intercept, cetes_28d), names_to = 'parametro', values_to = 'valor')
 
 
 ggplot(df_params, aes(x=fecha, y = valor)) +

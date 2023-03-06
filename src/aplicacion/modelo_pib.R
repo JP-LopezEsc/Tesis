@@ -1,7 +1,7 @@
 ################################################################################
-## Título: DLM M0 vs actividad
+## Título: DLM M0 vs pib
 
-## Fecha: 24-02-2023
+## Fecha: 28-02-2023
 ################################################################################
 
 library(tidyverse)
@@ -16,39 +16,42 @@ Sys.setlocale(locale = "es_ES.UTF-8")
 ##
 ################################################################################
 
-datos_actividad <- read_rds('datos/variables/actividad.rds')
+datos_pib <- read_rds('cache/variables/pib.rds')
 
 
-  
-ggplot(datos_actividad, aes(fecha, actividad)) +
+
+ggplot(datos_pib, aes(fecha, pib)) +
   geom_line() +
-  geom_vline(xintercept = as.Date('2020-03-01'), color = 'red')+
-  scale_x_date(date_breaks = "1 year",date_labels = "%Y", 
-               limits = c(datos_actividad$fecha[1], 
-                          datos_actividad$fecha[nrow(datos_actividad)]),
-               expand = c(0.02,0)) +
+  geom_vline(xintercept = 2020.00, color = 'red')+
   theme_classic() +
   xlab("Año") +
-  ylab("Actividad")
+  ylab("PIB")
 
-ggplot(data = datos_actividad, 
+
+
+ggplot(data = datos_pib, 
        mapping = aes(x = month(fecha, label = TRUE), 
-                     y = actividad))+
+                     y = pib))+
   geom_point()+
   geom_line(aes(group = factor(year(fecha)),
                 color = factor(year(fecha))))+
   scale_color_discrete(name = "Year")+
   xlab(label = "Month")
 
-
-
 # Datos efectivo --------------------------------------------------------------
 
-datos_efectivo <- read_rds('datos/variables/efectivo.rds')
+datos_efectivo <- read_rds('cache/variables/efectivo_trim.rds')
 
 
-cor(datos_efectivo$efectivo, datos_actividad$actividad)
+cor(datos_efectivo$efectivo, datos_pib$pib)
 
+
+ggplot(datos_efectivo, aes(fecha, efectivo)) +
+  geom_line() +
+  geom_vline(xintercept = 2020.00, color = 'red')+
+  theme_classic() +
+  xlab("Año") +
+  ylab("Circulación")
 
 ggplot(data = datos_efectivo, 
        mapping = aes(x = month(fecha, label = TRUE), 
@@ -71,7 +74,7 @@ TT <- length(datos_efectivo$efectivo)
 dat <- matrix(datos_efectivo$efectivo, nrow = 1)
 
 ## get predictor variable
-Act <- matrix(datos_actividad$actividad, nrow=1)
+Act <- matrix(datos_pib$pib, nrow=1)
 ## number of regr params (slope + intercept)
 m <- dim(Act)[1] + 1
 
@@ -89,7 +92,7 @@ A <- matrix(0) ## 1x1; scalar = 0
 V <- matrix("v") ## 1x1; scalar = r # Es Vt
 
 ## only need starting values for regr parameters
-inits_list <- list(x0 = matrix(c(0, 0), nrow = m))
+inits_list <- list(x0 = matrix(c(10, 10), nrow = m))
 ## list of model matrices & vectors
 mod_list <- list(B = G, U = U, Q = W, Z = F, A = A, R = V)
 
@@ -145,7 +148,7 @@ ggplot(data = df_result, aes(x = fecha)) +
 
 
 df_params <- data.frame('fecha' = datos_efectivo$fecha, 'intercept' = theta_priori[1,], 
-                             'actividad' = theta_priori[2,]) %>% 
+                        'actividad' = theta_priori[2,]) %>% 
   pivot_longer(cols = c(intercept, actividad), names_to = 'parametro', values_to = 'valor')
 
 
@@ -173,7 +176,7 @@ qqline(t(innov))
 
 ## p-value for t-test of H0: E(innov) = 0
 t.test(t(innov), mu = 0)$p.value
-#p>0.05, H0 cannot be rejected
+#p<0.05, H0 is rejected
 
 mean(innov)
 
