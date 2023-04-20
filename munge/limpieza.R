@@ -9,19 +9,21 @@ Sys.setlocale(locale = "es_ES.UTF-8")
 # Efectivo ------------------------------------------------------------------
 
 
-datos_efectivo_trim <- readxl::read_excel("datos/m0.xlsx", 
+datos_efectivo <- readxl::read_excel("datos/m0.xlsx", 
                                      range = "A18:B283") %>% 
-  rename(fecha = 1, efectivo = 2) %>% 
-  mutate(fecha = as.Date(fecha), efectivo = efectivo/1000000) %>% 
-  filter(fecha >= '2001-01-01', fecha <='2022-12-01')
+  rename(fecha2 = 1, efectivo = 2) %>% 
+  mutate(fecha2 = as.Date(fecha2), efectivo = efectivo/1000000) %>% 
+  filter(fecha2 >= '2001-01-01', fecha2 <='2022-12-01')
 
-datos_efectivo_trim$fecha <- as.yearqtr(datos_efectivo_trim$fecha, "%Y-%m-%d")
+datos_efectivo$fecha <- as.yearqtr(datos_efectivo$fecha2, "%Y-%m-%d")
 
-datos_efectivo_trim <- datos_efectivo_trim %>% 
+datos_efectivo_last <- datos_efectivo %>% 
   group_by(fecha) %>% 
-  summarise('efectivo'=sum(efectivo))
+  filter(fecha2 == max(fecha2)) %>% 
+  ungroup() %>% 
+  dplyr::select(3,2)
 
-write_rds(datos_efectivo_trim, 'cache/variables/efectivo_trim.rds')
+write_rds(datos_efectivo_last, 'cache/variables/last/efectivo_last.rds')
 
 # Actividad -----------------------------------------------------------------
 
@@ -93,18 +95,20 @@ write_rds(datos_efectivo_trim, 'cache/variables/efectivo_trim.rds')
 # 
 # write_rds(datos_inpc, 'datos/variables/inpc.rds')
 # 
-datos_inpc_trim  <- readxl::read_excel('datos/inpc.xls', range = 'A5:B642') %>%
+datos_inpc  <- readxl::read_excel('datos/inpc.xls', range = 'A5:B642') %>%
   rename('fecha' = 1, 'inpc' = 2) %>%
   mutate(fecha = str_replace(fecha, '/','-')) %>%
   mutate(fecha = as.Date(paste0(fecha,'-01'))) %>%
-  mutate(fecha2 = as.yearqtr(fecha, "%Y-%m-%d")) %>%
+  mutate(fecha2 = as.yearqtr(fecha, "%Y-%m-%d"))
+
+datos_inpc_last <- datos_inpc %>% 
   group_by(fecha2) %>%
-  filter(fecha == min(fecha)) %>%
+  filter(fecha == max(fecha)) %>%
   ungroup() %>%
   filter(fecha2>='2001Q1', fecha2 <= '2022Q4') %>%
   select('fecha' = 3, 2)
 
-write_rds(datos_inpc_trim, 'cache/variables/inpc_trim.rds')
+write_rds(datos_inpc_last, 'cache/variables/last/inpc_last.rds')
 
 
 # PIB -----------------------------------------------------------------------
@@ -142,13 +146,16 @@ datos_fix <- readxl::read_excel('datos/tipoCambio.xls', range = 'A7:D8409') %>%
   mutate(trim = as.yearqtr(fecha, "%Y-%m-%d")) %>% 
   mutate(fix = as.numeric(`Determinación`)) %>% 
   select(5,6,7) %>% 
-  drop_na() %>% 
+  drop_na()
+
+datos_fix_last <- datos_fix %>% 
   group_by(trim) %>% 
-  filter(fecha == min(fecha)) %>% 
+  filter(fecha == max(fecha)) %>% 
+  ungroup() %>% 
   select(fecha=2, 3) %>% 
   filter(fecha>='2001 Q1', fecha <= '2022 Q4')
 
-write_rds(datos_fix, 'cache/variables/fix_trim.rds')
+write_rds(datos_fix_last, 'cache/variables/last/fix_last.rds')
 
 
 
@@ -167,16 +174,33 @@ write_rds(datos_fix, 'cache/variables/fix_trim.rds')
 #   mutate(cetes_28d = as.numeric(cetes_28d))
 # 
 # write_rds(datos_cetes_28d, 'cache/variables/cetes_28d.rds')  
+# 
+# datos_cetes_28d_trim <- readxl::read_excel('datos/cetes 28d.xlsx', range = 'A18:B2352') %>% 
+#   rename('fecha'=1, 'cetes_28d'=2) %>% 
+#   mutate(fecha2 = as.yearqtr(fecha, "%Y-%m-%d")) %>% 
+#   group_by(fecha2) %>% 
+#   filter(fecha == min(fecha)) %>% 
+#   ungroup() %>% 
+#   filter(fecha2>='2001Q1', fecha2 <= '2022Q4') %>% 
+#   select('fecha' = 3, 2) %>% 
+#   mutate(cetes_28d = as.numeric(cetes_28d))
+# 
+# write_rds(datos_cetes_28d_trim, 'cache/variables/cetes_28d_trim.rds')
 
-datos_cetes_28d_trim <- readxl::read_excel('datos/cetes 28d.xlsx', range = 'A18:B2352') %>% 
-  rename('fecha'=1, 'cetes_28d'=2) %>% 
+
+
+# TIIE ----------------------------------------------------------------------
+
+datos_tiie <- readxl::read_excel('datos/tiie.xlsx', range = 'A18:B4351') %>% 
+  rename('fecha'=1, 'tiie'=2) %>% 
   mutate(fecha2 = as.yearqtr(fecha, "%Y-%m-%d")) %>% 
-  group_by(fecha2) %>% 
-  filter(fecha == min(fecha)) %>% 
-  ungroup() %>% 
-  filter(fecha2>='2001Q1', fecha2 <= '2022Q4') %>% 
-  select('fecha' = 3, 2) %>% 
-  mutate(cetes_28d = as.numeric(cetes_28d))
+  filter(fecha2>='2001Q1', fecha2 <= '2022Q4')
 
-write_rds(datos_cetes_28d_trim, 'cache/variables/cetes_28d_trim.rds')
+datos_tiie_last <- datos_tiie %>% 
+  group_by(fecha2) %>% 
+  filter(fecha == max(fecha)) %>% 
+  ungroup() %>% 
+  select('fecha' = 3, 2)
+
+write_rds(datos_tiie_last, 'cache/variables/last/tiie_last.rds')
 
