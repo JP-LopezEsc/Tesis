@@ -16,15 +16,15 @@ estimacion_MARSS <- function(y, F, inicio, periodos_extra, G, W, V, mt, Ct){
   
   #G_salida <-  matrix(list(0), m, m)
   #diag(G_salida) <- dlm$par$B
-  G_salida <- matrix(c(dlm$par$B[1], 0, 0, 
-                       0, dlm$par$B[2], 0, 
+  G_salida <- matrix(c(dlm$par$B[1], 0, 0,
+                       0, dlm$par$B[2], 0,
                        0,0,1), nrow=3)
   mode(G_salida) <- 'numeric'
   
   # W_salida <-  matrix(list(0), m, m)
   # diag(W_salida) <- dlm$par$Q
-  W_salida <- matrix(c(dlm$par$Q[1], 0, 0, 
-                       0, dlm$par$Q[2], 0, 
+  W_salida <- matrix(c(dlm$par$Q[1], 0, 0,
+                       0, dlm$par$Q[2], 0,
                        0,0,0), nrow=3)
   mode(W_salida) <- 'numeric'
   

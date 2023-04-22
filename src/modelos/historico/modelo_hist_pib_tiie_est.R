@@ -18,7 +18,7 @@ Sys.setlocale(locale = "es_ES.UTF-8")
 ################################################################################
 
 datos_pib <- read_rds('cache/variables/pib.rds') %>% 
-  filter(fecha >=2006.0, fecha <= 2013.75) %>% 
+  filter(fecha <= 2011.75) %>% 
   mutate(pib = log(pib))
 
 
@@ -32,48 +32,48 @@ ggplot(datos_pib, aes(fecha, pib)) +
 
 
 # Datos TIIE ----------------------------------------------------------
-
-datos_tiie <- read_rds('cache/variables/last/tiie_last.rds') %>% 
-  filter(fecha >=2006.0, fecha <= 2013.75) %>% 
-  mutate(tiie = log(tiie))
-
-
-
-ggplot(datos_tiie, aes(fecha, tiie)) +
-  geom_line() +
-  theme_classic() +
-  xlab("Año") +
-  ylab("TIIE")
+# 
+# datos_tiie <- read_rds('cache/variables/last/tiie_last.rds') %>% 
+#   filter(fecha >=2006.0, fecha <= 2013.75) %>% 
+#   mutate(tiie = log(tiie))
+# 
+# 
+# 
+# ggplot(datos_tiie, aes(fecha, tiie)) +
+#   geom_line() +
+#   theme_classic() +
+#   xlab("Año") +
+#   ylab("TIIE")
 
 
 # Datos INPC ----------------------------------------------------------
-
-datos_inpc <- read_rds('cache/variables/last/inpc_last.rds') %>% 
-  filter(fecha >=2006.0, fecha <= 2013.75) %>% 
-  mutate(inpc = log(inpc))
-
-ggplot(datos_inpc, aes(fecha, inpc)) +
-  geom_line() +
-  theme_classic() +
-  xlab("Año") +
-  ylab("INPC")
+# 
+# datos_inpc <- read_rds('cache/variables/last/inpc_last.rds') %>% 
+#   filter(fecha >=2006.0, fecha <= 2013.75) %>% 
+#   mutate(inpc = log(inpc))
+# 
+# ggplot(datos_inpc, aes(fecha, inpc)) +
+#   geom_line() +
+#   theme_classic() +
+#   xlab("Año") +
+#   ylab("INPC")
 
 # FIX -----------------------------------------------------------------------
-
-datos_fix <- read_rds('cache/variables/last/fix_last.rds') %>% 
-  filter(fecha >=2006.0, fecha <= 2013.75) %>% 
-  mutate(fix = log(fix))
-
-ggplot(datos_fix, aes(fecha, fix)) +
-  geom_line() +
-  theme_classic() +
-  xlab("Año") +
-  ylab("FIX")
+# 
+# datos_fix <- read_rds('cache/variables/last/fix_last.rds') %>% 
+#   filter(fecha >=2006.0, fecha <= 2013.75) %>% 
+#   mutate(fix = log(fix))
+# 
+# ggplot(datos_fix, aes(fecha, fix)) +
+#   geom_line() +
+#   theme_classic() +
+#   xlab("Año") +
+#   ylab("FIX")
 
 # Datos efectivo --------------------------------------------------------------
 
 datos_efectivo <- read_rds('cache/variables/last/efectivo_last.rds') %>% 
-  filter(fecha >=2006.0, fecha <= 2013.75) %>% 
+  filter(fecha <= 2011.75) %>% 
   mutate(efectivo = log(efectivo))
 
 ggplot(datos_efectivo, aes(fecha, efectivo)) +
@@ -83,18 +83,18 @@ ggplot(datos_efectivo, aes(fecha, efectivo)) +
   ylab("Efectivo")
 
 cor(datos_efectivo$efectivo, datos_pib$pib)
-cor(datos_efectivo$efectivo, datos_tiie$tiie)
-cor(datos_efectivo$efectivo, datos_fix$fix)
-cor(datos_efectivo$efectivo, datos_inpc$inpc)
-
-pcor(data.frame(datos_efectivo$efectivo, datos_pib$pib, datos_tiie$tiie, 
-                datos_fix$fix, datos_inpc$inpc))
-
-pcor(data.frame(datos_efectivo$efectivo, datos_pib$pib, datos_tiie$tiie,
-                datos_inpc$inpc))
-
-
-pcor(data.frame(datos_efectivo$efectivo, datos_pib$pib, datos_tiie$tiie))
+# cor(datos_efectivo$efectivo, datos_tiie$tiie)
+# cor(datos_efectivo$efectivo, datos_fix$fix)
+# cor(datos_efectivo$efectivo, datos_inpc$inpc)
+# 
+# pcor(data.frame(datos_efectivo$efectivo, datos_pib$pib, datos_tiie$tiie, 
+#                 datos_fix$fix, datos_inpc$inpc))
+# 
+# pcor(data.frame(datos_efectivo$efectivo, datos_pib$pib, datos_tiie$tiie,
+#                 datos_inpc$inpc))
+# 
+# 
+# pcor(data.frame(datos_efectivo$efectivo, datos_pib$pib, datos_tiie$tiie))
 
 
 # Estacionalidad ------------------------------------------------------------
@@ -121,7 +121,7 @@ dat <- matrix(datos_efectivo$efectivo, nrow = 1)
 
 ## get predictor variable
 pib <- matrix(datos_pib$pib, nrow=1)
-tiie <- matrix(datos_tiie$tiie, nrow=1)
+#tiie <- matrix(datos_tiie$tiie, nrow=1)
 #q1 <- matrix(datos_estacionalidad$Q1, nrow = 1)
 #q2 <- matrix(datos_estacionalidad$Q2, nrow = 1)
 #q3 <- matrix(datos_estacionalidad$Q3, nrow = 1)
@@ -129,20 +129,20 @@ q4 <- matrix(datos_estacionalidad$Q4, nrow = 1)
 #inpc <- matrix(datos_inpc$inpc, nrow=1)
 #fix <- matrix(datos_fix$fix, nrow = 1)
 ## number of regr params (slope + intercept)
-m <- 4
+m <- 3
 
 ## for process eqn
 G <- matrix(list(0), m, m)
 G[1,1] <- 'G.1'
 G[2,2] <- 'G.2'
-G[3,3] <- 'G.3'
-G[4,4] <- 1
+G[3,3] <- 1
+
 U <- matrix(0, nrow = m, ncol = 1) ## 2x1; both elements = 0
 W <- matrix(list(0), m, m) ## 2x2; all 0 for now #Es Wt
 W[1,1] <- 'W.1'
 W[2,2] <- 'W.2'
-W[3,3] <- 'W.3'
-W[4,4] <- 0
+W[3,3] <- 0
+
 #diag(W) <- c("w.1", "w.2", 'w.3','w.4') ## 2x2; diag = (q1,q2)
 
 
@@ -151,20 +151,20 @@ W[4,4] <- 0
 F <- array(NA, c(1, m, TT)) ## NxMxT; empty for now #Es Ft transpuesta
 F[1, 1, ] <- rep(1, TT) ## Nx1; 1's for intercept
 F[1, 2, ] <- pib ## Nx1; predictor variable
-F[1, 3, ] <- tiie ## Nx1; predictor variable
+#F[1, 3, ] <- tiie ## Nx1; predictor variable
 #F[1, 4, ] <- q1 ## Nx1; predictor variable
 #F[1, 5, ] <- q2 ## Nx1; predictor variable
 #F[1, 6, ] <- q3 ## Nx1; predictor variable
-F[1, 4, ] <- q4 ## Nx1; predictor variable
+F[1, 3, ] <- q4 ## Nx1; predictor variable
 #F[1, 4, ] <- inpc ## Nx1; predictor variable
 #F[1, 5, ] <- fix ## Nx1; predictor variable
 A <- matrix(0) ## 1x1; scalar = 0
 V <- matrix("v") ## 1x1; scalar = r # Es Vt
 C0 <- matrix(list(0), m, m)
-diag(C0) <- c('C0.1', 'C0.2', 'C0.3', 'C0.4')
+#diag(C0) <- c('C0.1', 'C0.2', 'C0.3', 'C0.4')
 
 ## only need starting values for regr parameters
-inits_list <- list(x0 = matrix(c(0, 0, 0, 0), nrow = m))
+inits_list <- list(x0 = matrix(c(0, 0, 0), nrow = m))
 ## list of model matrices & vectors
 mod_list <- list(B = G, U = U, Q = W, Z = F, A = A, R = V)
 
@@ -234,8 +234,7 @@ ggplot(data = df_result, aes(x = fecha)) +
 
 
 df_params <- data.frame('fecha' = as.numeric(datos_efectivo$fecha), 'intercept' = theta_priori[1,], 
-                        'pib' = theta_priori[2,], 'tiie' = theta_priori[3,], 
-                        'Q4' = theta_priori[4,]) %>% 
+                        'pib' = theta_priori[2,], 'Q4' = theta_priori[3,]) %>% 
   pivot_longer(cols = c(intercept:Q4), names_to = 'parametro', values_to = 'valor')
 
 
@@ -285,25 +284,22 @@ source('src/funciones/funciones_dlm.R')
 
 Vt <- V_est
 
-Gt <- matrix(c(dlm_1$par$B[1], 0, 0, 0,
-               0, dlm_1$par$B[2], 0, 0,
-               0, 0, dlm_1$par$B[3], 0,
-               0, 0, 0, 1), nrow=4)
+Gt <- matrix(c(dlm_1$par$B[1], 0, 0,
+               0, dlm_1$par$B[2], 0,
+               0, 0, 1), nrow=3)
 
-Wt <- matrix(c(dlm_1$par$Q[1], 0, 0, 0,
-               0, dlm_1$par$Q[2], 0, 0,
-               0, 0, dlm_1$par$Q[3], 0,
-               0, 0, 0, 0), nrow=4)
+Wt <- matrix(c(dlm_1$par$Q[1], 0, 0, 
+               0, dlm_1$par$Q[2], 0,
+               0, 0, 0), nrow=3)
 
 C0 <- solve(Gt) %*% (R[,,1] - Wt) %*% solve(t(Gt))
 
-m0 <- c(dlm_1$par$x0[1], dlm_1$par$x0[2], dlm_1$par$x0[3], dlm_1$par$x0[4])
+m0 <- c(dlm_1$par$x0[1], dlm_1$par$x0[2], dlm_1$par$x0[3])
 
 datos_F <- datos_pib %>% 
-  left_join(datos_tiie) %>% 
   left_join(datos_estacionalidad) %>% 
   mutate(intercept = 1) %>% 
-  dplyr::select(6,2,3,5)
+  dplyr::select(5,2,4)
 
 
 
@@ -344,9 +340,9 @@ ggplot(data = df_graficas, aes(x = fecha)) +
 
 
 df_params2 <- data.frame(reduce(dlm_2$mt, cbind) %>% t(), fecha = df_graficas$fecha)  %>% 
-  rename(Intercepto = X1, PIB = X2, TIIE = X3, Q4 = X4) %>% 
+  rename(Intercepto = X1, PIB = X2, Q4 = X3) %>% 
   pivot_longer(names_to = "parametro", values_to = "valor", 
-               cols = c(Intercepto, PIB, TIIE, Q4))
+               cols = c(Intercepto, PIB, Q4))
 
 ggplot(df_params2, aes(x=fecha, y = valor)) +
   geom_line() +
@@ -364,18 +360,18 @@ ggplot(df_params2, aes(x=fecha, y = valor)) +
 # Parametros iniciales para 2014-2022 ---------------------------------------
 
 #DLM 1
-kf_out$xtt[,32]
+kf_out$xtt[,44]
 
-kf_out$Vtt[,,32]
+kf_out$Vtt[,,44]
 
 
 
 #DLM 2
 
-dlm_2$mt[[32]] %>% 
+dlm_2$mt[[44]] %>% 
   write_rds('cache/outputs_modelos/m0.rds')
 
-dlm_2$Ct[[32]] %>% 
+dlm_2$Ct[[44]] %>% 
   write_rds('cache/outputs_modelos/C0.rds')
 
 Vt %>% 

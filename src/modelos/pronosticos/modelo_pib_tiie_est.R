@@ -16,7 +16,7 @@ Sys.setlocale(locale = "es_ES.UTF-8")
 ################################################################################
 
 datos_pib <- read_rds('cache/variables/pib.rds') %>% 
-  filter(fecha >=2014.0) %>% 
+  filter(fecha >=2012.0) %>% 
   mutate(pib = log(pib))
 
 
@@ -30,24 +30,24 @@ ggplot(datos_pib, aes(fecha, pib)) +
 
 
 # Datos TIIE ----------------------------------------------------------
-
-datos_tiie <- read_rds('cache/variables/last/tiie_last.rds') %>% 
-  filter(fecha >=2014.0) %>% 
-  mutate(tiie = log(tiie))
-
-
-
-ggplot(datos_tiie, aes(fecha, tiie)) +
-  geom_line() +
-  theme_classic() +
-  xlab("Año") +
-  ylab("TIIE")
+# 
+# datos_tiie <- read_rds('cache/variables/last/tiie_last.rds') %>% 
+#   filter(fecha >=2014.0) %>% 
+#   mutate(tiie = log(tiie))
+# 
+# 
+# 
+# ggplot(datos_tiie, aes(fecha, tiie)) +
+#   geom_line() +
+#   theme_classic() +
+#   xlab("Año") +
+#   ylab("TIIE")
 
 
 # Datos efectivo --------------------------------------------------------------
 
 datos_efectivo <- read_rds('cache/variables/last/efectivo_last.rds') %>% 
-  filter(fecha >=2014.0) %>% 
+  filter(fecha >=2012.0) %>% 
   mutate(efectivo = log(efectivo))
 
 ggplot(datos_efectivo, aes(fecha, efectivo)) +
@@ -57,9 +57,9 @@ ggplot(datos_efectivo, aes(fecha, efectivo)) +
   ylab("Efectivo")
 
 cor(datos_efectivo$efectivo, datos_pib$pib)
-cor(datos_efectivo$efectivo, datos_tiie$tiie)
-
-pcor(data.frame(datos_efectivo$efectivo, datos_pib$pib, datos_tiie$tiie))
+# cor(datos_efectivo$efectivo, datos_tiie$tiie)
+# 
+# pcor(data.frame(datos_efectivo$efectivo, datos_pib$pib, datos_tiie$tiie))
 
 
 # Estacionalidad ------------------------------------------------------------
@@ -87,10 +87,9 @@ C0 <- read_rds('cache/outputs_modelos/C0.rds')
 m0 <- read_rds('cache/outputs_modelos/m0.rds')
 
 datos_F <- datos_pib %>% 
-  left_join(datos_tiie) %>% 
   left_join(datos_estacionalidad) %>% 
   mutate(intercept = 1) %>% 
-  dplyr::select(6,2,3,5)
+  dplyr::select(5,2,4)
 
 
 
@@ -131,9 +130,9 @@ ggplot(data = df_graficas, aes(x = fecha)) +
 
 
 df_params <- data.frame(reduce(dlm_1$at, cbind) %>% t(), fecha = df_graficas$fecha)  %>% 
-  rename(Intercepto = X1, PIB = X2, TIIE = X3, Q4 = X4) %>% 
+  rename(Intercepto = X1, PIB = X2, Q4 = X3) %>% 
   pivot_longer(names_to = "parametro", values_to = "valor", 
-               cols = c(Intercepto, PIB, TIIE, Q4))
+               cols = c(Intercepto, PIB, Q4))
 
 ggplot(df_params, aes(x=fecha, y = valor)) +
   geom_line() +
@@ -155,7 +154,7 @@ ggplot(df_params, aes(x=fecha, y = valor)) +
 
 
 dlm_2 <- actualizacion_dlm_V_desc(y = datos_efectivo$efectivo, variables_F = datos_F, 
-                           m0 = m0, C0 = C0, G = Gt, W = Wt, S0 = as.numeric(Vt), n0=1,
+                           m0 = m0, C0 = C0, G = Gt, W = Wt, S0 = as.numeric(Vt), n0=44,
                            lista_interv = list())
 
 
@@ -192,9 +191,9 @@ ggplot(data = df_graficas2, aes(x = fecha)) +
 
 
 df_params2 <- data.frame(reduce(dlm_2$mt, cbind) %>% t(), fecha = df_graficas$fecha)  %>% 
-  rename(Intercepto = X1, PIB = X2, TIIE = X3, Q4 = X4) %>% 
+  rename(Intercepto = X1, PIB = X2, Q4 = X3) %>% 
   pivot_longer(names_to = "parametro", values_to = "valor", 
-               cols = c(Intercepto, PIB, TIIE, Q4))
+               cols = c(Intercepto, PIB, Q4))
 
 ggplot(df_params2, aes(x=fecha, y = valor)) +
   geom_line() +
@@ -221,11 +220,10 @@ dat <- matrix(datos_efectivo$efectivo, nrow = 1)
 
 ## get predictor variable
 pib <- matrix(datos_pib$pib, nrow=1)
-tiie <- matrix(datos_tiie$tiie, nrow=1)
 q4 <- matrix(datos_estacionalidad$Q4, nrow = 1)
 
 ## number of regr params (slope + intercept)
-m <- 4
+m <- 3
 
 ## for process eqn
 G <- read_rds('cache/outputs_modelos/G.rds')
@@ -239,8 +237,7 @@ W <- read_rds('cache/outputs_modelos/W.rds')
 F <- array(NA, c(1, m, TT)) ## NxMxT; empty for now #Es Ft transpuesta
 F[1, 1, ] <- rep(1, TT) ## Nx1; 1's for intercept
 F[1, 2, ] <- pib ## Nx1; predictor variable
-F[1, 3, ] <- tiie ## Nx1; predictor variable
-F[1, 4, ] <- q4 ## Nx1; predictor variable
+F[1, 3, ] <- q4 ## Nx1; predictor variable
 A <- matrix(0) ## 1x1; scalar = 0
 V <- read_rds('cache/outputs_modelos/V.rds')
 
@@ -316,8 +313,8 @@ ggplot(data = df_result3, aes(x = fecha)) +
 
 
 df_params3 <- data.frame('fecha' = as.numeric(datos_efectivo$fecha), 'intercept' = theta_priori[1,], 
-                        'pib' = theta_priori[2,], 'tiie' = theta_priori[3,], 
-                        'Q4' = theta_priori[4,]) %>% 
+                        'pib' = theta_priori[2,], 
+                        'Q4' = theta_priori[3,]) %>% 
   pivot_longer(cols = c(intercept:Q4), names_to = 'parametro', values_to = 'valor')
 
 
