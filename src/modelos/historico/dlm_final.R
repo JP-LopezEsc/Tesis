@@ -1,5 +1,5 @@
 ################################################################################
-## Título: DLM M0 vs PIB, con dummy para Q4. 12 periodos
+## Título: DLM M0 vs PIB, con reacomodo estacional
 
 ## Fecha: 24-02-2023
 ################################################################################
@@ -18,7 +18,7 @@ Sys.setlocale(locale = "es_ES.UTF-8")
 ################################################################################
 
 datos_pib <- read_rds('cache/variables/pib.rds') %>% 
-  filter(fecha <= 2003.75) %>% 
+  filter(fecha <= 2011.75) %>% 
   mutate(pib = log(pib))
 
 
@@ -34,7 +34,7 @@ ggplot(datos_pib, aes(fecha, pib)) +
 # Datos efectivo --------------------------------------------------------------
 
 datos_efectivo <- read_rds('cache/variables/last/efectivo_last.rds') %>% 
-  filter(fecha <= 2003.75) %>% 
+  filter(fecha <= 2011.75) %>% 
   mutate(efectivo = log(efectivo))
 
 ggplot(datos_efectivo, aes(fecha, efectivo)) +
@@ -49,14 +49,11 @@ cor(datos_efectivo$efectivo, datos_pib$pib)
 # Estacionalidad ------------------------------------------------------------
 
 datos_estacionalidad <- datos_efectivo %>% 
-  mutate(Q4 = ifelse(fecha - floor(fecha) == 0.75,1,0))
+  mutate(Q1 = 1) %>% 
+  mutate(Q2=0) %>% 
+  mutate(Q3=0) %>% 
+  mutate(Q4=0)
 
-
-# datos_estacionalidad <- datos_efectivo %>% 
-#   mutate(Q1 = ifelse(fecha - floor(fecha) == 0,1,0)) %>% 
-#   mutate(Q2 = ifelse(fecha - floor(fecha) == 0.25,1,0)) %>% 
-#   mutate(Q3 = ifelse(fecha - floor(fecha) == 0.5,1,0)) %>% 
-#   mutate(Q4 = ifelse(fecha - floor(fecha) == 0.75,1,0))
 
 ################################################################################
 ## Modelo MARSS. 2006 Q1 - 2013 Q2
@@ -71,27 +68,32 @@ dat <- matrix(datos_efectivo$efectivo, nrow = 1)
 ## get predictor variable
 pib <- matrix(datos_pib$pib, nrow=1)
 # tiie <- matrix(datos_tiie$tiie, nrow=1)
-#q1 <- matrix(datos_estacionalidad$Q1, nrow = 1)
-#q2 <- matrix(datos_estacionalidad$Q2, nrow = 1)
-#q3 <- matrix(datos_estacionalidad$Q3, nrow = 1)
+q1 <- matrix(datos_estacionalidad$Q1, nrow = 1)
+q2 <- matrix(datos_estacionalidad$Q2, nrow = 1)
+q3 <- matrix(datos_estacionalidad$Q3, nrow = 1)
 q4 <- matrix(datos_estacionalidad$Q4, nrow = 1)
 #inpc <- matrix(datos_inpc$inpc, nrow=1)
 #fix <- matrix(datos_fix$fix, nrow = 1)
 ## number of regr params (slope + intercept)
-m <- 3
+m <- 6
 
 ## for process eqn
 G <- matrix(list(0), m, m)
 G[1,1] <- 'G.1'
 G[2,2] <- 'G.2'
-G[3,3] <- 1
+G[3,4] <- 1
+G[4,5] <- 1
+G[5,6] <-1
+G[6,3] <- 1
+
+
 
 U <- matrix(0, nrow = m, ncol = 1) ## 2x1; both elements = 0
 W <- matrix(list(0), m, m) ## 2x2; all 0 for now #Es Wt
 #diag(W) <- c("w.1", "w.2", 'w.3','w.4') ## 2x2; diag = (q1,q2)
 W[1,1] <- 'W.1'
 W[2,2] <- 'W.2'
-W[3,3] <- 0
+W[3,3] <- 'W.3'
 
 
 ## for observation eqn
@@ -99,10 +101,10 @@ F <- array(NA, c(1, m, TT)) ## NxMxT; empty for now #Es Ft transpuesta
 F[1, 1, ] <- rep(1, TT) ## Nx1; 1's for intercept
 F[1, 2, ] <- pib ## Nx1; predictor variable
 # F[1, 3, ] <- tiie ## Nx1; predictor variable
-#F[1, 4, ] <- q1 ## Nx1; predictor variable
-#F[1, 5, ] <- q2 ## Nx1; predictor variable
-#F[1, 6, ] <- q3 ## Nx1; predictor variable
-F[1, 3, ] <- q4 ## Nx1; predictor variable
+F[1, 3, ] <- q1 ## Nx1; predictor variable
+F[1, 4, ] <- q2 ## Nx1; predictor variable
+F[1, 5, ] <- q3 ## Nx1; predictor variable
+F[1, 6, ] <- q4 ## Nx1; predictor variable
 #F[1, 4, ] <- inpc ## Nx1; predictor variable
 #F[1, 5, ] <- fix ## Nx1; predictor variable
 A <- matrix(0) ## 1x1; scalar = 0
@@ -110,7 +112,7 @@ V <- matrix("v") ## 1x1; scalar = r # Es Vt
 
 
 ## only need starting values for regr parameters
-inits_list <- list(x0 = matrix(c(0, 0, 0), nrow = m))
+inits_list <- list(x0 = matrix(c(0, 0, 0,0,0,0), nrow = m))
 ## list of model matrices & vectors
 mod_list <- list(B = G, U = U, Q = W, Z = F, A = A, R = V)
 
@@ -181,8 +183,8 @@ ggplot(data = df_result, aes(x = fecha)) +
 
 df_params <- data.frame('fecha' = as.numeric(datos_efectivo$fecha), 'intercept' = theta_priori[1,], 
                         'pib' = theta_priori[2,],
-                        'Q4' = theta_priori[3,]) %>% 
-  pivot_longer(cols = c(intercept:Q4), names_to = 'parametro', values_to = 'valor')
+                        'Q1' = theta_priori[3,]) %>% 
+  pivot_longer(cols = c(intercept:Q1), names_to = 'parametro', values_to = 'valor')
 
 
 ggplot(df_params, aes(x=fecha, y = valor)) +
@@ -231,22 +233,28 @@ source('src/funciones/funciones_dlm.R')
 
 Vt <- V_est
 
-Gt <- matrix(c(dlm_1$par$B[1], 0, 0, 
-               0, dlm_1$par$B[2], 0, 
-               0, 0, 1), nrow=3)
+Gt <- matrix(c(dlm_1$par$B[1], 0, 0, 0,0,0,
+               0, dlm_1$par$B[2], 0, 0,0,0,
+               0, 0, 0,0,0,1,
+               0,0,1,0,0,0,
+               0,0,0,1,0,0,
+               0,0,0,0,1,0), nrow=6)
 
-Wt <- matrix(c(dlm_1$par$Q[1], 0, 0,
-               0, dlm_1$par$Q[2], 0,
-               0, 0, 0), nrow=3)
+Wt <- matrix(c(dlm_1$par$Q[1], 0, 0,0,0,0,
+               0, dlm_1$par$Q[2], 0,0,0,0,
+               0, 0, dlm_1$par$Q[3],0,0,0,
+               0,0,0,0,0,0,
+               0,0,0,0,0,0,
+               0,0,0,0,0,0), nrow=6)
 
 C0 <- solve(Gt) %*% (R[,,1] - Wt) %*% solve(t(Gt))
 
-m0 <- c(dlm_1$par$x0[1], dlm_1$par$x0[2], dlm_1$par$x0[3])
+m0 <- c(dlm_1$par$x0[1], dlm_1$par$x0[2], dlm_1$par$x0[3],dlm_1$par$x0[4], dlm_1$par$x0[5], dlm_1$par$x0[6])
 
 datos_F <- datos_pib %>% 
   left_join(datos_estacionalidad) %>% 
   mutate(intercept = 1) %>% 
-  dplyr::select(5,2,4)
+  dplyr::select(8,2,4:7)
 
 
 
@@ -287,9 +295,9 @@ ggplot(data = df_graficas, aes(x = fecha)) +
 
 
 df_params2 <- data.frame(reduce(dlm_2$mt, cbind) %>% t(), fecha = df_graficas$fecha)  %>% 
-  rename(Intercepto = X1, PIB = X2, Q4 = X3) %>% 
+  rename(Intercepto = X1, PIB = X2, Q1 = X3) %>% 
   pivot_longer(names_to = "parametro", values_to = "valor", 
-               cols = c(Intercepto, PIB, Q4))
+               cols = c(Intercepto, PIB, Q1))
 
 ggplot(df_params2, aes(x=fecha, y = valor)) +
   geom_line() +
@@ -307,35 +315,26 @@ ggplot(df_params2, aes(x=fecha, y = valor)) +
 # Parametros iniciales para 2006 Q1-2008 Q4 ---------------------------------------
 
 #DLM 1
-kf_out$xtt[,12]
+kf_out$xtt[,44]
 
-kf_out$Vtt[,,12]
+kf_out$Vtt[,,44]
 
 kf_out$xtt
 
 #DLM 2
 
-dlm_2$mt[[12]] %>% 
-  write_rds('cache/outputs_modelos/12_periodos/sin tiie/m0.rds')
+dlm_2$mt[[44]] %>% 
+  write_rds('cache/outputs_modelos/final/m0.rds')
 
-dlm_2$Ct[[12]] %>% 
-  write_rds('cache/outputs_modelos/12_periodos/sin tiie/C0.rds')
+dlm_2$Ct[[44]] %>% 
+  write_rds('cache/outputs_modelos/final/C0.rds')
 
 Vt %>% 
-  write_rds('cache/outputs_modelos/12_periodos/sin tiie/V.rds')
-
-dlm_1$par$x0 %>% 
-  write_rds('cache/outputs_modelos/12_periodos/sin tiie/m0_hist.rds')
-
-dlm_2$mt %>% 
-  write_rds('cache/outputs_modelos/12_periodos/sin tiie/m1_m12.rds')
-
-dlm_2$Ct %>% 
-  write_rds('cache/outputs_modelos/12_periodos/sin tiie/C1_C12.rds')
+  write_rds('cache/outputs_modelos/final/V.rds')
 
 Gt %>% 
-   write_rds('cache/outputs_modelos/12_periodos/sin tiie/G.rds')
+  write_rds('cache/outputs_modelos/final/G.rds')
 # 
 Wt %>% 
-  write_rds('cache/outputs_modelos/12_periodos/sin tiie/W.rds')
+  write_rds('cache/outputs_modelos/final/W.rds')
 
