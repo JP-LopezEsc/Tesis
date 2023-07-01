@@ -73,7 +73,8 @@ actualizacion_dlm_V_desc <- function(y, variables_F, m0, C0, G, W, S0, n0, lista
   return(list("at" = lista_at,  "Rt" = lista_Rt,  "ft" = lista_ft, 
               "Qt" = lista_Qt, "CI" = lista_CI, "CI_inf" = lista_CI_inf, 
               "CI_sup" = lista_CI_sup, "mt" = lista_mt, "Ct" = lista_Ct,
-              "St" = lista_St))
+              "St" = lista_St, 'm0' = m0, 'C0' = C0,
+              'G' = G, 'W' = W, 'S0' = S0))
 }
 
 
@@ -141,7 +142,8 @@ actualizacion_dlm <- function(y, variables_F, m0, C0, G, W, V, lista_interv){
   }
   return(list("at" = lista_at,  "Rt" = lista_Rt,  "ft" = lista_ft, 
               "Qt" = lista_Qt, "CI" = lista_CI, "CI_inf" = lista_CI_inf, 
-              "CI_sup" = lista_CI_sup, "mt" = lista_mt, "Ct" = lista_Ct))
+              "CI_sup" = lista_CI_sup, "mt" = lista_mt, "Ct" = lista_Ct,
+              'm0' = m0, 'C0' = C0))
 }
 
 
@@ -355,4 +357,77 @@ actualizacion_dlm_V_desc_estima_G_W <- function(y, variables_F, y_hist, variable
               "Qt" = lista_Qt, "CI" = lista_CI, "CI_inf" = lista_CI_inf, 
               "CI_sup" = lista_CI_sup, "mt" = lista_mt, "Ct" = lista_Ct,
               "St" = lista_St))
+}
+
+
+
+
+#Los datos deben empezar en el primer periodo futuro (no observado)
+pronosticos <- function(variables_F, per_futuros, at_0, Rt_0, G, W, St){
+  at_k<- at_0
+  Rt_k <- Rt_0
+  lista_at_k <- list()
+  lista_Rt_k <- list()
+  lista_ft_k <- list()
+  lista_Qt_k <- list()
+  lista_CI_inf <- list()
+  lista_CI_sup <- list()
+  for(k in 1:per_futuros){
+
+    at_k <- G %*% at_k
+    Rt_k <- G %*% Rt_k %*% t(G) + W
+    Ft <- as.numeric(variables_F[k,])
+    ft_k <- t(Ft) %*% at_k
+    Qt_k <- t(Ft) %*% Rt_k %*% Ft + St
+    CI <- c(qnorm(0.025, mean = ft_k, sd = sqrt(Qt_k)), 
+            qnorm(0.975, mean = ft_k,  sd = sqrt(Qt_k)))
+    CI_inf <- CI[1]
+    CI_sup <- CI[2]
+    lista_at_k[[k]] <- at_k
+    lista_Rt_k[[k]] <- Rt_k
+    lista_ft_k[[k]] <- ft_k
+    lista_Qt_k[[k]] <- Qt_k
+    lista_CI_inf[[k]] <- CI_inf
+    lista_CI_sup[[k]] <- CI_sup
+    
+  }
+  return(list("at_k" = lista_at_k, "Rt_k" = lista_Rt_k, "ft_k" = lista_ft_k, 
+              "Qt_k" = lista_Qt_k, "CI_inf" = lista_CI_inf, "CI_sup" = lista_CI_sup))
+}
+
+pronosticos_k_pasos <- function(variables_F, k, G, W, S0, modelo){
+  
+  lista_ft_k <- list()
+  lista_Qt_k <- list()
+  lista_CI_inf <- list()
+  lista_CI_sup <- list()
+  
+  G <- modelo$G
+  W <- modelo$W
+  
+  for (t in 1:(nrow(datos_F) - k + 1)){
+    
+    if(t==1){
+      at_0 <- modelo$m0
+      Rt_0 <- modelo$C0
+      St <- modelo$S0
+    } else {
+      at_0 <- modelo$mt[[t-1]]
+      Rt_0 <- modelo$Ct[[t-1]]
+      St <- modelo$St[[t-1]]
+    }
+    
+    prons_t <- pronosticos(variables_F = variables_F[t:nrow(datos_F),],
+                           per_futuros = k,
+                           at_0 = at_0, Rt_0 = Rt_0,
+                           G = G, W = W, St = St)
+    
+    lista_ft_k[[t]] <- prons_t$ft_k[[k]]
+    lista_Qt_k[[t]] <- prons_t$Qt_k[[k]]
+    lista_CI_inf[[t]] <- prons_t$CI_inf[[k]]
+    lista_CI_sup[[t]] <- prons_t$CI_sup[[k]]
+  }
+  
+  return(list("ft_k" = lista_ft_k, 
+              "Qt_k" = lista_Qt_k, "CI_inf" = lista_CI_inf, "CI_sup" = lista_CI_sup))
 }

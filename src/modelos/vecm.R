@@ -17,7 +17,6 @@ Sys.setlocale(locale = "es_ES.UTF-8")
 # Datos efectivo --------------------------------------------------------------
 
 datos_efectivo <- read_rds('cache/variables/last/efectivo_last.rds') %>% 
-  filter(fecha <= 2011.75) %>% 
   mutate(efectivo = log(efectivo))
 
 ggplot(datos_efectivo, aes(fecha, efectivo)) +
@@ -35,7 +34,6 @@ plot(dif_efectivo, main = "Dif efectivo", type = 'l')
 
 
 datos_pib <- read_rds('cache/variables/pib.rds') %>% 
-  filter(fecha <= 2011.75) %>% 
   mutate(pib = log(pib))
 
 
@@ -57,7 +55,6 @@ plot(dif_pib, main = "Dif PIB", type = 'l')
 
 
 datos_tiie <- read_rds('cache/variables/last/tiie_last.rds') %>% 
-  filter(fecha <= 2011.75) %>% 
   mutate(tiie = log(tiie))
 
 
@@ -76,7 +73,6 @@ plot(dif_tiie, main = "Dif TIIE", type = 'l')
 # INPC ----------------------------------------------------------------------
 
 datos_inpc <- read_rds('cache/variables/last/inpc_last.rds') %>% 
-  filter(fecha <= 2011.75) %>% 
   mutate(inpc = log(inpc))
 
 
@@ -96,7 +92,6 @@ plot(dif_inpc, main = "Dif INPC", type = 'l')
 
 
 datos_fix <- read_rds('cache/variables/last/fix_last.rds') %>% 
-  filter(fecha <= 2011.75) %>% 
   mutate(fix = log(fix))
 
 
@@ -115,10 +110,10 @@ plot(dif_fix, main = "Dif FIX", type = 'l')
 # Ordenes de integracion ----------------------------------------------------
 
 adf.test(datos_efectivo$efectivo, k = 4)
-adf.test(dif_efectivo, k = 2)
+adf.test(dif_efectivo, k = 4)
 
-adf.test(datos_pib$pib, k=2)
-adf.test(dif_pib, k = 2)
+adf.test(datos_pib$pib, k=4)
+adf.test(dif_pib, k = 4)
 
 adf.test(datos_tiie$tiie, k=4)
 adf.test(dif_tiie, k = 4)
@@ -270,3 +265,29 @@ m.pred_vec2var_ca.jo
 
 VECM_pred_tsDyn - m.pred_vec2var_ca.jo
 
+
+
+
+preds_vecm <- predict_rolling(VECM_tsDyn, nroll = 44, n.ahead = 8, refit.every = 1)$pred$datos_efectivo.efectivo
+
+
+df_pred <- read_rds('cache/variables/last/efectivo_last.rds') %>% 
+  filter(fecha >= 2012.0) %>% 
+  dplyr::select(fecha, efectivo) %>% 
+  mutate(efectivo = log(efectivo)) %>% 
+  cbind(data.frame('efectivo_pred' = preds_vecm))
+
+
+
+ggplot(data = df_pred, aes(x = fecha)) +
+  geom_point(aes(y = efectivo, shape = "Observaciones"), size = 2) +
+  geom_line(aes(y = efectivo_pred, color = 'Pronósticos'), size = 1) +
+  theme_bw() +
+  theme(legend.position = "bottom") +
+  labs(shape = "") +
+  ylab('Circulación') +
+  xlab('Fecha') +
+  theme(axis.text.x = element_text(size = 20),
+        axis.text.y = element_text(size = 20),
+        axis.title = element_text(size = 22),
+        legend.text = element_text(size=20)) 

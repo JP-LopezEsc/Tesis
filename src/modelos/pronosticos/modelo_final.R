@@ -236,6 +236,61 @@ TotalSumSquares2 <- sum((df_graficas2$y_real - mean(df_graficas2$y_real))^2)
 RSquared2 <- 1 - (SumResSquared2/TotalSumSquares2)
 RSquared2
 
+dlm_2 %>% write_rds('cache/outputs_modelos/final/dlm_final.rds')
+
+# Pronósticos ---------------------------------------------------------------
+
+k <- 8
+
+prons2 <- pronosticos_k_pasos(datos_F, k, modelo = dlm_2)
+
+df_prons2 <- data.frame("fecha" = datos_efectivo$fecha[k:nrow(datos_F)], 
+                           "y_real" = datos_efectivo$efectivo[k:nrow(datos_F)], 
+                           "y_pronostico" = prons2$ft_k %>% unlist(), "CI_inf" = prons2$CI_inf %>% unlist(),
+                           "CI_sup" = prons2$CI_sup %>% unlist()) %>% 
+  mutate(fecha = as.numeric(fecha))
+
+
+ggplot(data = df_prons2, aes(x = fecha)) +
+  geom_point(aes(y = y_real, shape = "Observaciones"), size = 2) +
+  geom_line(aes(y = y_pronostico, color = 'Pronósticos'), size = 1) +
+  geom_line(aes(y = CI_inf), color = "blue", alpha = 0.3) +
+  geom_line(aes(y = CI_sup), color = "blue", alpha = 0.3) + 
+  geom_ribbon(aes(ymax = CI_sup, ymin = CI_inf, fill = 'Intervalo al 95%'), alpha = 0.3) +
+  theme_bw() +
+  scale_colour_manual(
+    name = "", values = c("Intervalo al 95%" = "transparent",
+                          "Pronósticos" = "black")) +
+  scale_fill_manual(
+    name = "",  values = c("Intervalo al 95%" = "blue",
+                           "Pronósticos" = "transparent")) +
+  theme(legend.position = "bottom") +
+  labs(shape = "") +
+  ylab('Circulación') +
+  xlab('Fecha') +
+  theme(axis.text.x = element_text(size = 20),
+        axis.text.y = element_text(size = 20),
+        axis.title = element_text(size = 22),
+        legend.text = element_text(size=20)) 
+
+
+residsk <- df_prons2 %>% 
+  mutate(resids = y_real - y_pronostico) %>% 
+  dplyr::select(resids)
+
+
+mean(residsk$resids)
+
+var(df_prons2$y_pronostico)
+
+mean(residsk$resids^2)
+
+SumResSquaredk <- sum(residsk$resids^2)
+TotalSumSquaresk <- sum((df_prons2$y_real - mean(df_prons2$y_real))^2)
+RSquaredk <- 1 - (SumResSquaredk/TotalSumSquaresk)
+RSquaredk
+
+
 ################################################################################
 ## Intervenciones
 ##

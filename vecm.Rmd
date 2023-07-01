@@ -140,6 +140,14 @@ El modelo se ve así:
 summary(modelo_vecm)
 ```
 
+```{r}
+coefA(modelo_vecm)
+```
+```{r}
+coefB(modelo_vecm)
+```
+
+
 Este VECM puede escribirse como un VAR de la siguiente manera. Como se mencionó anteriormente, el VECM tiene 4 lags y el VAR tiene 5
 
 ```{r}
