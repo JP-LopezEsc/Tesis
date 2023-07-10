@@ -1,0 +1,531 @@
+---
+title: "DLM con INPC"
+output: pdf_document
+date: "2023-07-01"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+Este modelo se parece mucho al último que te mandé,  $\boldsymbol{G}_t$, $\boldsymbol{W}_t$ y $V$ se estiman por máxima verosimilitud utilizando datos del 2001 T1 al 2011 T4 con el paquete MARSS (usa un método que se llama BFGS). Se define la $\boldsymbol{G}$ de tal forma que la estacionalidad se reacomoda:
+
+```{r}
+G <- matrix(list(0), 7, 7)
+G[1,1] <- 'G.1'
+G[2,2] <- 'G.2'
+G[3,3] <- 'G.3'
+G[4,5] <- 1
+G[5,6] <- 1
+G[6,7] <-1
+G[7,4] <- 1
+G
+```
+Aquí G.1 corresponde al intercepto, G.2 al PIB y G.3 al INPC. Por otro lado, $\boldsymbol{W}$ tiene la siguente forma:
+
+```{r}
+W <- matrix(list(0), 7, 7)
+W[1,1] <- 'W.1'
+W[2,2] <- 'W.2'
+W[3,3] <- 'W.3'
+W[4,4] <- 'W.4'
+W
+```
+
+W.1 está relacionado con el intercepto, W.2 con el PIB, W.3 con el INPC, y W.4 con el factor estacional en turno. Con esta W, se permite el cambio en el intercepto, el parámetro del PIB, el parámetro del INPC y del factor estacional del trimestre en turno.
+
+Con esto, las variables explicativas se tienen que acomodar así:
+
+```{r}
+datos_pib <- read_rds('cache/variables/pib.rds') %>% 
+  filter(fecha > 2011.75) %>% 
+  mutate(pib = log(pib))
+
+datos_inpc <- read_rds('cache/variables/last/inpc_last.rds') %>% 
+  filter(fecha > 2011.75) %>% 
+  mutate(inpc = log(inpc))
+
+datos_efectivo <- read_rds('cache/variables/last/efectivo_last.rds') %>% 
+  filter(fecha > 2011.75) %>% 
+  mutate(efectivo = log(efectivo))
+
+datos_estacionalidad <- datos_efectivo %>% 
+  mutate(Q1 = 1) %>% 
+  mutate(Q2=0) %>% 
+  mutate(Q3=0) %>% 
+  mutate(Q4=0)
+
+datos_F <- datos_pib %>% 
+  left_join(datos_estacionalidad) %>% 
+  left_join(datos_inpc) %>% 
+  mutate(intercept = 1) %>% 
+  dplyr::select(9,2, 8, 4:7)
+
+
+datos_F 
+
+```
+
+En el caso de $V_t$, estoy considerando que la varianza es una constante desconocida  y tiene una distribución a priori, que es $\phi \sim G[\frac{n_0}{2}, \frac{n_0S_0}{2}]$ con $\phi = V^{-1}$. En este caso, el estimador puntual de $V$ es $S_0$. Lo que hice fue estimar $V$ con los datos de 2001 a 2011 usando MARSS, esa estimación la utilizo como $S_0$ para lo demás, y en cada periodo se actualiza $S_t$. Como utilicé 44 observaciones para estimar esto, entonces $n_0$ es 44.
+
+La distribución posterior de los parámetros en 2011 T4 $(\boldsymbol{\theta}_{2011 T4} | D_{2011T4})$, la tomo como la distribución inicial $(\boldsymbol{\theta}_{0} | D_{0})$ para las observaciones a partir de 2012 T1, que es en donde mido el desempeño el modelo. 
+
+Leo las estimaciones y los valores iniciales que obtuve en el periodo 2001 T1 a 2011 T4:
+
+```{r}
+source('src/funciones/funciones_dlm.R')
+
+C0 <- read_rds('cache/outputs_modelos/inpc/C0.rds')
+
+m0 <- read_rds('cache/outputs_modelos/inpc/m0.rds')
+
+G <- read_rds('cache/outputs_modelos/inpc/G.rds')
+
+W <- read_rds('cache/outputs_modelos/inpc/W.rds')
+
+S0 <- as.numeric(read_rds('cache/outputs_modelos/inpc/V.rds'))
+
+```
+
+Como el paquete MARSS no incluye el caso en el que la varianza es una constante desconocida que se reestima en cada periodo ni se pueden hacer intervenciones fácilmente, hice mi función para poder modelar eso en el filtro de Kalman:
+
+```{r}
+ dlm <- actualizacion_dlm_V_desc(y = datos_efectivo$efectivo, variables_F = datos_F,
+                                  m0 = m0, C0 = C0, G = G, W = W, S0 = S0, n0 = 44,
+                                  lista_interv = list())
+```
+
+Ahora grafico los pronósticos del modelo, los intervalos al 95% y las observaciones reales para ver el ajuste
+
+```{r}
+df_ajuste <- data.frame("fecha" = datos_efectivo %>% dplyr::select(fecha), 
+                           "y_real" = datos_efectivo$efectivo, 
+                           "y_pronostico" = dlm$ft %>% unlist(), 
+                            "CI_inf" = dlm$CI_inf %>% unlist(),
+                           "CI_sup" = dlm$CI_sup %>% unlist()) %>% 
+  mutate(fecha = as.numeric(fecha))
+
+
+ggplot(data = df_ajuste, aes(x = fecha)) +
+  geom_point(aes(y = y_real, shape = "Observaciones"), size = 2) +
+  geom_line(aes(y = y_pronostico, color = 'Pronósticos'), size = 1) +
+  geom_line(aes(y = CI_inf), color = "blue", alpha = 0.3) +
+  geom_line(aes(y = CI_sup), color = "blue", alpha = 0.3) + 
+  geom_ribbon(aes(ymax = CI_sup, ymin = CI_inf, fill = 'Intervalo al 95%'), alpha = 0.3) +
+  theme_bw() +
+  scale_colour_manual(
+    name = "", values = c("Intervalo al 95%" = "transparent",
+                          "Pronósticos" = "black")) +
+  scale_fill_manual(
+    name = "",  values = c("Intervalo al 95%" = "blue",
+                           "Pronósticos" = "transparent")) +
+  theme(legend.position = "bottom") +
+  labs(shape = "") +
+  ylab('Circulación') +
+  xlab('Fecha') +
+  labs(title = 'Pronósticos e intervalos a un paso')
+
+```
+Ajusta muy bien, el único punto en donde no ajusta bien es al inicio de la pandemia. Esto lo puedo solucionar fácilmente con una intervención (viene al final del pdf). La evolución de los parámetros se ve así:
+
+```{r}
+df_params <- data.frame(reduce(dlm$at, cbind) %>% t(), fecha = df_ajuste$fecha)  %>% 
+  rename(Intercepto = X1, PIB = X2,  INPC = X3, Q = X4) %>% 
+  pivot_longer(names_to = "parametro", values_to = "valor", 
+               cols = c(Intercepto, PIB, INPC,  Q))
+
+ggplot(df_params, aes(x=fecha, y = valor)) +
+  geom_line() +
+  facet_wrap(~parametro, nrow = 4, scales = "free") +
+  theme_bw()  +
+  ylab("Valor") +
+  xlab("Fecha") 
+```
+El PIB es positivo, eso tiene mucho sentido. El INPC la mayoría del tiempo es positivo, pero a veces es negativo, no sé bien cómo interpretar esto, cuando estuve leyendo literatura sobre modelos de demanda de dinero en general los estudios indican que la inflación debe ser negativa (porque al haber inflación alta las personas se cubren con activos reales y no con dinero), aunque hay varios autores que indican que puede ser positiva debido a que cuando se espera una inflación alta, las personas tienen más efectivo para hacer frente a la subida de los precios. La estacionalidad tiene picos en Q4, aunque al final del periodo ya no es tan notable esto (tiene mucho sentido por lo que se ve en los datos).
+
+Igual podemos ver cómo evoluciona la estimación de la varianza en cada periodo. Se ve que hay un incremento muy grande al inicio de la pandemia.
+
+```{r}
+df_St <- data.frame(dlm$St %>% unlist(), fecha = df_ajuste$fecha) %>% 
+  dplyr::rename(St = 1)
+
+ggplot(df_St, aes(x=fecha, y = St)) +
+  geom_line(size = 1) +
+  theme_bw()  +
+  ylab("St") 
+```
+La autocorrelación de los residuos se ve muy bien.
+```{r}
+resids <- df_ajuste %>% 
+  mutate(resids = y_real - y_pronostico) %>% 
+  dplyr::select(resids)
+
+acf(resids)
+```
+
+Por último, el error cuadrático medio es muy bajo:
+
+```{r}
+ecm_1 <-mean(resids$resids^2)
+ecm_1
+```
+
+Puedo graficar los ajustes a más de un paso. Igual para esto definí una función, solo es necesario pasarle las variables explicativas, el número de periodos futuros que se desea pronosticar y el dlm obtenido anteriormente
+
+K = 2
+```{r}
+k <- 2
+prons2 <- pronosticos_k_pasos(datos_F, k =  k, modelo = dlm)
+
+df_prons2 <- data.frame("fecha" = datos_efectivo$fecha[k:nrow(datos_F)], 
+                        "y_real" = datos_efectivo$efectivo[k:nrow(datos_F)], 
+                        "y_pronostico" = prons2$ft_k %>% unlist(), 
+                        "CI_inf" = prons2$CI_inf %>% unlist(),
+                        "CI_sup" = prons2$CI_sup %>% unlist()) %>% 
+  mutate(fecha = as.numeric(fecha))
+
+ggplot(data = df_prons2, aes(x = fecha)) +
+  geom_point(aes(y = y_real, shape = "Observaciones"), size = 2) +
+  geom_line(aes(y = y_pronostico, color = 'Pronósticos'), size = 1) +
+  geom_line(aes(y = CI_inf), color = "blue", alpha = 0.3) +
+  geom_line(aes(y = CI_sup), color = "blue", alpha = 0.3) + 
+  geom_ribbon(aes(ymax = CI_sup, ymin = CI_inf, fill = 'Intervalo al 95%'), alpha = 0.3) +
+  theme_bw() +
+  scale_colour_manual(
+    name = "", values = c("Intervalo al 95%" = "transparent",
+                          "Pronósticos" = "black")) +
+  scale_fill_manual(
+    name = "",  values = c("Intervalo al 95%" = "blue",
+                           "Pronósticos" = "transparent")) +
+  theme(legend.position = "bottom") +
+  labs(shape = "", title = 'Pronósticos a 2 pasos') +
+  ylab('Circulación') +
+  xlab('Fecha')
+  
+```
+```{r}
+resids2 <- df_prons2 %>% 
+  mutate(resids = y_real - y_pronostico) %>% 
+  dplyr::select(resids)
+
+ecm_2 <-mean(resids2$resids^2)
+
+ecm_2
+```
+
+Lo mismo para k=3
+
+```{r}
+k <- 3
+prons3 <- pronosticos_k_pasos(datos_F, k =  k, modelo = dlm)
+
+df_prons3 <- data.frame("fecha" = datos_efectivo$fecha[k:nrow(datos_F)], 
+                        "y_real" = datos_efectivo$efectivo[k:nrow(datos_F)], 
+                        "y_pronostico" = prons3$ft_k %>% unlist(), 
+                        "CI_inf" = prons3$CI_inf %>% unlist(),
+                        "CI_sup" = prons3$CI_sup %>% unlist()) %>% 
+  mutate(fecha = as.numeric(fecha))
+
+ggplot(data = df_prons3, aes(x = fecha)) +
+  geom_point(aes(y = y_real, shape = "Observaciones"), size = 2) +
+  geom_line(aes(y = y_pronostico, color = 'Pronósticos'), size = 1) +
+  geom_line(aes(y = CI_inf), color = "blue", alpha = 0.3) +
+  geom_line(aes(y = CI_sup), color = "blue", alpha = 0.3) + 
+  geom_ribbon(aes(ymax = CI_sup, ymin = CI_inf, fill = 'Intervalo al 95%'), alpha = 0.3) +
+  theme_bw() +
+  scale_colour_manual(
+    name = "", values = c("Intervalo al 95%" = "transparent",
+                          "Pronósticos" = "black")) +
+  scale_fill_manual(
+    name = "",  values = c("Intervalo al 95%" = "blue",
+                           "Pronósticos" = "transparent")) +
+  theme(legend.position = "bottom") +
+  labs(shape = "", title = 'Pronósticos a 3 pasos') +
+  ylab('Circulación') +
+  xlab('Fecha')
+```
+```{r}
+resids3 <- df_prons3 %>% 
+  mutate(resids = y_real - y_pronostico) %>% 
+  dplyr::select(resids)
+
+ecm_3 <-mean(resids3$resids^2)
+
+ecm_3
+```
+
+Y lo mismo para cualquier número de periodos futuros.
+
+```{r, echo=F}
+k <- 4
+prons <- pronosticos_k_pasos(datos_F, k =  k, modelo = dlm)
+
+df_prons <- data.frame("fecha" = datos_efectivo$fecha[k:nrow(datos_F)], 
+                        "y_real" = datos_efectivo$efectivo[k:nrow(datos_F)], 
+                        "y_pronostico" = prons$ft_k %>% unlist(), 
+                       "CI_inf" = prons$CI_inf %>% unlist(),
+                        "CI_sup" = prons$CI_sup %>% unlist()) %>% 
+  mutate(fecha = as.numeric(fecha))
+
+ggplot(data = df_prons, aes(x = fecha)) +
+  geom_point(aes(y = y_real, shape = "Observaciones"), size = 2) +
+  geom_line(aes(y = y_pronostico, color = 'Pronósticos'), size = 1) +
+  geom_line(aes(y = CI_inf), color = "blue", alpha = 0.3) +
+  geom_line(aes(y = CI_sup), color = "blue", alpha = 0.3) + 
+  geom_ribbon(aes(ymax = CI_sup, ymin = CI_inf, fill = 'Intervalo al 95%'), alpha = 0.3) +
+  theme_bw() +
+  scale_colour_manual(
+    name = "", values = c("Intervalo al 95%" = "transparent",
+                          "Pronósticos" = "black")) +
+  scale_fill_manual(
+    name = "",  values = c("Intervalo al 95%" = "blue",
+                           "Pronósticos" = "transparent")) +
+  theme(legend.position = "bottom") +
+  labs(shape = "", title = 'Pronósticos a 4 pasos') +
+  ylab('Circulación') +
+  xlab('Fecha')
+  
+```
+
+
+```{r, echo=F}
+k <- 5
+prons <- pronosticos_k_pasos(datos_F, k =  k, modelo = dlm)
+
+df_prons <- data.frame("fecha" = datos_efectivo$fecha[k:nrow(datos_F)], 
+                        "y_real" = datos_efectivo$efectivo[k:nrow(datos_F)], 
+                        "y_pronostico" = prons$ft_k %>% unlist(), 
+                       "CI_inf" = prons$CI_inf %>% unlist(),
+                        "CI_sup" = prons$CI_sup %>% unlist()) %>% 
+  mutate(fecha = as.numeric(fecha))
+
+ggplot(data = df_prons, aes(x = fecha)) +
+  geom_point(aes(y = y_real, shape = "Observaciones"), size = 2) +
+  geom_line(aes(y = y_pronostico, color = 'Pronósticos'), size = 1) +
+  geom_line(aes(y = CI_inf), color = "blue", alpha = 0.3) +
+  geom_line(aes(y = CI_sup), color = "blue", alpha = 0.3) + 
+  geom_ribbon(aes(ymax = CI_sup, ymin = CI_inf, fill = 'Intervalo al 95%'), alpha = 0.3) +
+  theme_bw() +
+  scale_colour_manual(
+    name = "", values = c("Intervalo al 95%" = "transparent",
+                          "Pronósticos" = "black")) +
+  scale_fill_manual(
+    name = "",  values = c("Intervalo al 95%" = "blue",
+                           "Pronósticos" = "transparent")) +
+  theme(legend.position = "bottom") +
+  labs(shape = "", title = 'Pronósticos a 5 pasos') +
+  ylab('Circulación') +
+  xlab('Fecha')
+  
+```
+
+```{r, echo=F}
+k <- 6
+prons <- pronosticos_k_pasos(datos_F, k =  k, modelo = dlm)
+
+df_prons <- data.frame("fecha" = datos_efectivo$fecha[k:nrow(datos_F)], 
+                        "y_real" = datos_efectivo$efectivo[k:nrow(datos_F)], 
+                        "y_pronostico" = prons$ft_k %>% unlist(), 
+                       "CI_inf" = prons$CI_inf %>% unlist(),
+                        "CI_sup" = prons$CI_sup %>% unlist()) %>% 
+  mutate(fecha = as.numeric(fecha))
+
+ggplot(data = df_prons, aes(x = fecha)) +
+  geom_point(aes(y = y_real, shape = "Observaciones"), size = 2) +
+  geom_line(aes(y = y_pronostico, color = 'Pronósticos'), size = 1) +
+  geom_line(aes(y = CI_inf), color = "blue", alpha = 0.3) +
+  geom_line(aes(y = CI_sup), color = "blue", alpha = 0.3) + 
+  geom_ribbon(aes(ymax = CI_sup, ymin = CI_inf, fill = 'Intervalo al 95%'), alpha = 0.3) +
+  theme_bw() +
+  scale_colour_manual(
+    name = "", values = c("Intervalo al 95%" = "transparent",
+                          "Pronósticos" = "black")) +
+  scale_fill_manual(
+    name = "",  values = c("Intervalo al 95%" = "blue",
+                           "Pronósticos" = "transparent")) +
+  theme(legend.position = "bottom") +
+  labs(shape = "", title = 'Pronósticos a 6 pasos') +
+  ylab('Circulación') +
+  xlab('Fecha')
+  
+```
+
+```{r, echo=F}
+k <- 7
+prons <- pronosticos_k_pasos(datos_F, k =  k, modelo = dlm)
+
+df_prons <- data.frame("fecha" = datos_efectivo$fecha[k:nrow(datos_F)], 
+                        "y_real" = datos_efectivo$efectivo[k:nrow(datos_F)], 
+                        "y_pronostico" = prons$ft_k %>% unlist(), 
+                       "CI_inf" = prons$CI_inf %>% unlist(),
+                        "CI_sup" = prons$CI_sup %>% unlist()) %>% 
+  mutate(fecha = as.numeric(fecha))
+
+ggplot(data = df_prons, aes(x = fecha)) +
+  geom_point(aes(y = y_real, shape = "Observaciones"), size = 2) +
+  geom_line(aes(y = y_pronostico, color = 'Pronósticos'), size = 1) +
+  geom_line(aes(y = CI_inf), color = "blue", alpha = 0.3) +
+  geom_line(aes(y = CI_sup), color = "blue", alpha = 0.3) + 
+  geom_ribbon(aes(ymax = CI_sup, ymin = CI_inf, fill = 'Intervalo al 95%'), alpha = 0.3) +
+  theme_bw() +
+  scale_colour_manual(
+    name = "", values = c("Intervalo al 95%" = "transparent",
+                          "Pronósticos" = "black")) +
+  scale_fill_manual(
+    name = "",  values = c("Intervalo al 95%" = "blue",
+                           "Pronósticos" = "transparent")) +
+  theme(legend.position = "bottom") +
+  labs(shape = "", title = 'Pronósticos a 7 pasos') +
+  ylab('Circulación') +
+  xlab('Fecha')
+  
+```
+
+```{r, echo=F}
+k <- 8
+prons <- pronosticos_k_pasos(datos_F, k =  k, modelo = dlm)
+
+df_prons <- data.frame("fecha" = datos_efectivo$fecha[k:nrow(datos_F)], 
+                        "y_real" = datos_efectivo$efectivo[k:nrow(datos_F)], 
+                        "y_pronostico" = prons$ft_k %>% unlist(), 
+                       "CI_inf" = prons$CI_inf %>% unlist(),
+                        "CI_sup" = prons$CI_sup %>% unlist()) %>% 
+  mutate(fecha = as.numeric(fecha))
+
+ggplot(data = df_prons, aes(x = fecha)) +
+  geom_point(aes(y = y_real, shape = "Observaciones"), size = 2) +
+  geom_line(aes(y = y_pronostico, color = 'Pronósticos'), size = 1) +
+  geom_line(aes(y = CI_inf), color = "blue", alpha = 0.3) +
+  geom_line(aes(y = CI_sup), color = "blue", alpha = 0.3) + 
+  geom_ribbon(aes(ymax = CI_sup, ymin = CI_inf, fill = 'Intervalo al 95%'), alpha = 0.3) +
+  theme_bw() +
+  scale_colour_manual(
+    name = "", values = c("Intervalo al 95%" = "transparent",
+                          "Pronósticos" = "black")) +
+  scale_fill_manual(
+    name = "",  values = c("Intervalo al 95%" = "blue",
+                           "Pronósticos" = "transparent")) +
+  theme(legend.position = "bottom") +
+  labs(shape = "", title = 'Pronósticos a 8 pasos') +
+  ylab('Circulación') +
+  xlab('Fecha')
+  
+```
+
+
+## Intervención
+
+Solo realizaré una intervención al inicio de la pandemia en 2020 T2, es el único punto en el que el modelo falla en los pronósticos a un paso. Este punto equivale a $t=34$. $\boldsymbol{a}_{34}$ y  $\boldsymbol{R}_{34}$ sin intervenir tienen los siguientes valores:
+
+```{r}
+a_34 <-dlm$at[[34]]
+R_34 <-dlm$Rt[[34]]
+a_34
+R_34
+```
+Para la intervención subiré el coeficiente del intercepto en $\boldsymbol{a}_{34}$ de -0.0076 a 0.1. En $\boldsymbol{R}_{34}$ duplicaré el valor de la varianza del intercepto. En la función de dlm que definí puedo agregar una lista con los valores que quiero intervenir y el tiempo en el que los quiero intervenir. Nada más le tengo que decir que quiero intervenir $t=34$ y pasarle los valores de  $\boldsymbol{a}_{34}$ y  $\boldsymbol{R}_{34}$ intervenidos.
+
+```{r}
+a_34_int <- a_34
+a_34_int[1,] <- 0.1
+a_34_int
+```
+
+```{r}
+R_34_int <- R_34
+R_34_int[1,1] <- R_34[1,1]*2
+R_34_int
+```
+
+
+```{r}
+list_interv <- list("t_int" = list(34), 
+                    "at_int" = list(a_34_int), 
+                     "Rt_int" = list(R_34_int))
+```
+
+A la función le paso la lista de intervención definida.
+```{r}
+ dlm_interv <- actualizacion_dlm_V_desc(y = datos_efectivo$efectivo, variables_F = datos_F,
+                                  m0 = m0, C0 = C0, G = G, W = W, S0 = S0, n0 = 44,
+                                  lista_interv = list_interv)
+```
+
+Ahora grafico los pronósticos del modelo, los intervalos al 95% y las observaciones reales para ver el ajuste
+
+```{r}
+df_ajuste_int <- data.frame("fecha" = datos_efectivo %>% dplyr::select(fecha), 
+                           "y_real" = datos_efectivo$efectivo, 
+                           "y_pronostico" = dlm_interv$ft %>% unlist(), 
+                           "CI_inf" = dlm_interv$CI_inf %>% unlist(),
+                           "CI_sup" = dlm_interv$CI_sup %>% unlist()) %>% 
+  mutate(fecha = as.numeric(fecha))
+
+
+ggplot(data = df_ajuste_int, aes(x = fecha)) +
+  geom_point(aes(y = y_real, shape = "Observaciones"), size = 2) +
+  geom_line(aes(y = y_pronostico, color = 'Pronósticos'), size = 1) +
+  geom_line(aes(y = CI_inf), color = "blue", alpha = 0.3) +
+  geom_line(aes(y = CI_sup), color = "blue", alpha = 0.3) + 
+  geom_ribbon(aes(ymax = CI_sup, ymin = CI_inf, fill = 'Intervalo al 95%'), alpha = 0.3) +
+  theme_bw() +
+  scale_colour_manual(
+    name = "", values = c("Intervalo al 95%" = "transparent",
+                          "Pronósticos" = "black")) +
+  scale_fill_manual(
+    name = "",  values = c("Intervalo al 95%" = "blue",
+                           "Pronósticos" = "transparent")) +
+  theme(legend.position = "bottom") +
+  labs(shape = "") +
+  ylab('Circulación') +
+  xlab('Fecha') +
+  labs(title = 'Pronósticos e intervalos a un paso, modelo intervenido')
+
+```
+Mucho mejor! Ahora se puede ver el efecto de la intervención en los parámetros:
+
+```{r}
+df_params_int <- data.frame(reduce(dlm_interv$at, cbind) %>% t(), 
+                            fecha = df_ajuste_int$fecha)  %>% 
+  rename(Intercepto = X1, PIB = X2,  INPC = X3, Q = X4) %>% 
+  pivot_longer(names_to = "parametro", values_to = "valor", 
+               cols = c(Intercepto, PIB, INPC,  Q))
+
+ggplot(df_params_int, aes(x=fecha, y = valor)) +
+  geom_line() +
+  facet_wrap(~parametro, nrow = 4, scales = "free") +
+  theme_bw()  +
+  ylab("Valor") +
+  xlab("Fecha") 
+```
+
+Igual podemos ver cómo evoluciona la estimación de la varianza en cada periodo. Gracias a la intevención, la estimación de la varianza no subió tanto en la pandemia comparado con el modelo sin intervenir.
+```{r}
+df_St_int <- data.frame(dlm_interv$St %>% unlist(), fecha = df_ajuste_int$fecha) %>% 
+  dplyr::rename(St = 1)
+
+ggplot(df_St_int, aes(x=fecha, y = St)) +
+  geom_line(size = 1) +
+  theme_bw()  +
+  ylab("St") 
+```
+La autocorrelación de los residuos se ve muy bien.
+```{r}
+resids_int <- df_ajuste_int %>% 
+  mutate(resids = y_real - y_pronostico) %>% 
+  dplyr::select(resids)
+
+acf(resids_int)
+```
+
+Por último, el error cuadrático medio es muy bajo:
+
+```{r}
+ecm_int <-mean(resids_int$resids^2)
+ecm_int
+```
+
+Gracias a la intervención, el error cuadrático medio es mucho más bajo.
+
+Mis función para pronosticar a más de un paso todavía no está listo para las intervenciones, nada más me falta agregar eso para poder tener todos los pronósticos, por ahora con intervenciones solo puedo pronosticar a un paso, no creo tardar tanto en modificar las funciones para poder incluir las intervenciones en los pronósticos a más de un paso.

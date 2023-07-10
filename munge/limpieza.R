@@ -3,6 +3,7 @@ library(tidyverse)
 library(janitor)
 library(lubridate)
 library(zoo)
+library(openxlsx)
 Sys.setlocale(locale = "es_ES.UTF-8")
 
 
@@ -23,7 +24,7 @@ datos_efectivo_last <- datos_efectivo %>%
   ungroup() %>% 
   dplyr::select(3,2)
 
-write_rds(datos_efectivo_last, 'cache/variables/last/efectivo_last.rds')
+write_rds(datos_efectivo_last, 'cache/variables/efectivo.rds')
 
 # Actividad -----------------------------------------------------------------
 
@@ -111,6 +112,32 @@ datos_inpc_last <- datos_inpc %>%
 write_rds(datos_inpc_last, 'cache/variables/last/inpc_last.rds')
 
 
+
+# INPC mensual --------------------------------------------------------------
+
+#Los datos están en inflacion mensual, se define funcion para calcular
+#inflacion trimestral
+calcula_inflacion_trim <- function(i_mensuales){
+  i_trim <- 1
+  for(i in 1:length(i_mensuales)){
+    i_trim <- i_trim*(1+i_mensuales[i]/100)
+  }
+  return((i_trim-1)*100)
+}
+
+
+datos_inpc_trim <- readxl::read_excel('datos/inflacion_mensual.xls', range = 'A5:B269') %>% 
+  rename('fecha' = 1, 'inpc' = 2) %>% 
+  mutate(fecha = str_replace(fecha, '/','-')) %>%
+  mutate(fecha = as.Date(paste0(fecha,'-01'))) %>%
+  mutate(fecha2 = as.yearqtr(fecha, "%Y-%m-%d")) %>% 
+  group_by(fecha2) %>% 
+  mutate(calcula_inflacion_trim(inpc)) %>% 
+  select('fecha' = 3, 'inpc' = 4) %>% 
+  distinct()
+
+write_rds(datos_inpc_trim, 'cache/variables/inpc_trim.rds')
+
 # PIB -----------------------------------------------------------------------
 
 #PIB en miles de millones de pesos
@@ -155,7 +182,7 @@ datos_fix_last <- datos_fix %>%
   select(fecha=2, 3) %>% 
   filter(fecha>='2001 Q1', fecha <= '2022 Q4')
 
-write_rds(datos_fix_last, 'cache/variables/last/fix_last.rds')
+write_rds(datos_fix_last, 'cache/variables/fix.rds')
 
 
 
@@ -202,5 +229,15 @@ datos_tiie_last <- datos_tiie %>%
   ungroup() %>% 
   select('fecha' = 3, 2)
 
-write_rds(datos_tiie_last, 'cache/variables/last/tiie_last.rds')
+write_rds(datos_tiie_last, 'cache/variables/tiie.rds')
+
+
+
+# Archivo xlsx --------------------------------------------------------------
+
+#Se crea un archivo xslx con las variables que al final fueron seleccionadas
+
+datos_pib %>% 
+  left_join(datos_inpc_last) %>% 
+  write.xlsx('datos/pib_inpc_clean.xlsx')
 

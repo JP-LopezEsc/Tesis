@@ -74,7 +74,8 @@ actualizacion_dlm_V_desc <- function(y, variables_F, m0, C0, G, W, S0, n0, lista
               "Qt" = lista_Qt, "CI" = lista_CI, "CI_inf" = lista_CI_inf, 
               "CI_sup" = lista_CI_sup, "mt" = lista_mt, "Ct" = lista_Ct,
               "St" = lista_St, 'm0' = m0, 'C0' = C0,
-              'G' = G, 'W' = W, 'S0' = S0))
+              'G' = G, 'W' = W, 'S0' = S0, 'lista_interv' = lista_interv,
+              'n0' = n0))
 }
 
 
@@ -363,7 +364,12 @@ actualizacion_dlm_V_desc_estima_G_W <- function(y, variables_F, y_hist, variable
 
 
 #Los datos deben empezar en el primer periodo futuro (no observado)
-pronosticos <- function(variables_F, per_futuros, at_0, Rt_0, G, W, St){
+#Para unas distribuciones iniciales dadas, calcula las distribuciones de pronostico
+#hasta 'per_futuros' pasos
+pronosticos <- function(variables_F, per_futuros, at_0, Rt_0, G, W, St, nt,
+                        t_iter = NULL, lista_interv = NULL, 
+                        per_anticip_interv = NULL){
+  #browser() 
   at_k<- at_0
   Rt_k <- Rt_0
   lista_at_k <- list()
@@ -373,14 +379,21 @@ pronosticos <- function(variables_F, per_futuros, at_0, Rt_0, G, W, St){
   lista_CI_inf <- list()
   lista_CI_sup <- list()
   for(k in 1:per_futuros){
+    
+    if(isTRUE((t_iter + k - 1) %in% lista_interv$t_int & k <= per_anticip_interv)){
+      at_k <- lista_interv$at_int[[match(t_iter + k - 1, list_interv$t_int)]]
+      Rt_k <- lista_interv$Rt_int[[match(t_iter + k - 1, list_interv$t_int)]]
+      interv <- T
+    } else {
+      at_k <- G %*% at_k
+      Rt_k <- G %*% Rt_k %*% t(G) + W
+    }
 
-    at_k <- G %*% at_k
-    Rt_k <- G %*% Rt_k %*% t(G) + W
     Ft <- as.numeric(variables_F[k,])
     ft_k <- t(Ft) %*% at_k
     Qt_k <- t(Ft) %*% Rt_k %*% Ft + St
-    CI <- c(qnorm(0.025, mean = ft_k, sd = sqrt(Qt_k)), 
-            qnorm(0.975, mean = ft_k,  sd = sqrt(Qt_k)))
+    CI <- c(qst(0.025, nu = nt, mu = ft_k, sigma = sqrt(Qt_k)),
+            qst(0.975, nu = nt, mu = ft_k, sigma = sqrt(Qt_k)))
     CI_inf <- CI[1]
     CI_sup <- CI[2]
     lista_at_k[[k]] <- at_k
@@ -395,7 +408,9 @@ pronosticos <- function(variables_F, per_futuros, at_0, Rt_0, G, W, St){
               "Qt_k" = lista_Qt_k, "CI_inf" = lista_CI_inf, "CI_sup" = lista_CI_sup))
 }
 
-pronosticos_k_pasos <- function(variables_F, k, G, W, S0, modelo){
+# Para todos los periodos aplica la funcion de pronosticos
+pronosticos_k_pasos <- function(variables_F, k, modelo, 
+                                lista_interv = NULL, per_anticip_interv = NULL){
   
   lista_ft_k <- list()
   lista_Qt_k <- list()
@@ -404,23 +419,28 @@ pronosticos_k_pasos <- function(variables_F, k, G, W, S0, modelo){
   
   G <- modelo$G
   W <- modelo$W
-  
+  #La iteracion t contiene info hasta D_{t-1}
   for (t in 1:(nrow(datos_F) - k + 1)){
     
     if(t==1){
       at_0 <- modelo$m0
       Rt_0 <- modelo$C0
       St <- modelo$S0
+      nt <- modelo$n0
     } else {
       at_0 <- modelo$mt[[t-1]]
       Rt_0 <- modelo$Ct[[t-1]]
       St <- modelo$St[[t-1]]
+      nt <- nt + 1
     }
     
     prons_t <- pronosticos(variables_F = variables_F[t:nrow(datos_F),],
                            per_futuros = k,
                            at_0 = at_0, Rt_0 = Rt_0,
-                           G = G, W = W, St = St)
+                           G = G, W = W, St = St, nt = nt, t_iter = t,
+                           lista_interv = lista_interv, 
+                           per_anticip_interv = per_anticip_interv
+                           )
     
     lista_ft_k[[t]] <- prons_t$ft_k[[k]]
     lista_Qt_k[[t]] <- prons_t$Qt_k[[k]]
