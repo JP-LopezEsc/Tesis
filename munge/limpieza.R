@@ -238,6 +238,6 @@ write_rds(datos_tiie_last, 'cache/variables/tiie.rds')
 #Se crea un archivo xslx con las variables que al final fueron seleccionadas
 
 datos_pib %>% 
-  left_join(datos_inpc_last) %>% 
+  left_join(datos_inpc_trim) %>% 
   write.xlsx('datos/pib_inpc_clean.xlsx')
 

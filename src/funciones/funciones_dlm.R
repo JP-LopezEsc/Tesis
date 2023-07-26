@@ -409,7 +409,7 @@ pronosticos <- function(variables_F, per_futuros, at_0, Rt_0, G, W, St, nt,
 }
 
 # Para todos los periodos aplica la funcion de pronosticos
-pronosticos_k_pasos <- function(variables_F, k, modelo, 
+pronosticos_k_pasos <- function(prons_F, k, modelo, 
                                 lista_interv = NULL, per_anticip_interv = NULL){
   
   lista_ft_k <- list()
@@ -433,8 +433,8 @@ pronosticos_k_pasos <- function(variables_F, k, modelo,
       St <- modelo$St[[t-1]]
       nt <- nt + 1
     }
-    
-    prons_t <- pronosticos(variables_F = variables_F[t:nrow(datos_F),],
+    variables_F = prons_F[[t]]
+    prons_t <- pronosticos(variables_F = variables_F,
                            per_futuros = k,
                            at_0 = at_0, Rt_0 = Rt_0,
                            G = G, W = W, St = St, nt = nt, t_iter = t,

@@ -256,9 +256,12 @@ RSquared2
 
 # Pronósticos ---------------------------------------------------------------
 
-k <- 2
+prons_F_banxico <- read_rds('cache/variables/prons_banxico.rds')
+  
 
-prons2 <- pronosticos_k_pasos(datos_F, k, modelo = dlm_2)
+k <- 8
+
+prons2 <- pronosticos_k_pasos(prons_F = prons_F_banxico, k, modelo = dlm_2)
 
 df_prons2 <- data.frame("fecha" = datos_efectivo$fecha[k:nrow(datos_F)], 
                         "y_real" = datos_efectivo$efectivo[k:nrow(datos_F)], 
@@ -411,9 +414,9 @@ mean(resids_interv$resids^2)
 
 # Pronosticos K pasos -------------------------------------------------------
 
-k_int <- 2
+k_int <- 8
 
-prons2_int <- pronosticos_k_pasos(datos_F, k_int, modelo = dlm_interv, 
+prons2_int <- pronosticos_k_pasos(prons_F = prons_F_banxico, k_int, modelo = dlm_interv, 
                                   lista_interv = list_interv,
                                   per_anticip_interv =1)
 
