@@ -8,7 +8,7 @@ Sys.setlocale(locale = "es_ES.UTF-8")
 
 # Efectivo ----------------------------------------------------------------------
 
-datos_efectivo <- read_rds('cache/variables/last/efectivo_last.rds') %>% 
+datos_efectivo <- read_rds('cache/variables/efectivo.rds') %>% 
   mutate(efectivo = log(efectivo))
 
 
@@ -24,7 +24,7 @@ datos_inpc <- read_rds('cache/variables/inpc_trim.rds')
 
 
 
-# Con los datos hasta 2011 se obtuvo que se tienen 1 lags y r=1 cointegraciones en el VECM, 
+# Con los datos hasta 2011 Q4 se obtuvo que se tienen 1 lags y r=1 cointegraciones en el VECM, 
 # se reestimaran los vecm en cada periodo, pero manteniendo estos parametros.
 
 datos_estacionalidad <- datos_efectivo %>% 
@@ -77,16 +77,16 @@ df_pred
 ggplot(data = df_pred, aes(x = fecha)) +
   geom_point(aes(y = efectivo, shape = "Observaciones"), size = 2) +
   geom_line(aes(y = fcst, color = 'Pronósticos'), size = 1) +
-  geom_line(aes(y = lower), color = "orange", alpha = 0.3) +
-  geom_line(aes(y = upper), color = "orange", alpha = 0.3) + 
+  geom_line(aes(y = lower), color = "forestgreen", alpha = 0.3) +
+  geom_line(aes(y = upper), color = "forestgreen", alpha = 0.3) + 
   geom_ribbon(aes(ymax = upper, ymin = lower, fill = 'Intervalo al 95%'), 
               alpha = 0.3) +
   theme_bw() +
   scale_colour_manual(
     name = "", values = c("Intervalo al 95%" = "transparent",
-                          "Pronósticos" = "orange")) +
+                          "Pronósticos" = "forestgreen")) +
   scale_fill_manual(
-    name = "",  values = c("Intervalo al 95%" = "orange",
+    name = "",  values = c("Intervalo al 95%" = "forestgreen",
                            "Pronósticos" = "transparent")) +
   theme(legend.position = "bottom") +
   labs(shape = "") +

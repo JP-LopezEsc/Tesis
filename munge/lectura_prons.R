@@ -1,9 +1,6 @@
 library(tidyverse)
 library(openxlsx)
 
-paste0('A', 2, ':D',10)
-'A2:D10'
-
 readxl::read_xlsx('datos/pronosticos_banxico.xlsx', 
                   sheet = 'prons Banxico', range = paste0('A', 2, ':D',10))
 
@@ -20,3 +17,4 @@ for(i in 0:44) {
 }
 
 prons_banxico %>% write_rds('cache/variables/prons_banxico.rds')
+

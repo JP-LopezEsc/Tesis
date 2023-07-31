@@ -26,91 +26,6 @@ datos_efectivo_last <- datos_efectivo %>%
 
 write_rds(datos_efectivo_last, 'cache/variables/efectivo.rds')
 
-# Actividad -----------------------------------------------------------------
-
-# 
-# datos_actividad <- readxl::read_excel("datos/actividad economica.xlsx", 
-#                                       range = "A6:NZ23") %>% 
-#   clean_names() %>% 
-#   rename(Concepto = 1) %>% 
-#   filter(Concepto == 'Total') %>% 
-#   pivot_longer(names_to = 'mes', cols = c(2:390), values_to = 'actividad') %>% 
-#   mutate(mes2 = case_when(
-#     str_detect(mes, 'enero') ~ '01-01',
-#     str_detect(mes, 'febrero') ~ '02-01',
-#     str_detect(mes, 'marzo') ~ '03-01',
-#     str_detect(mes, 'abril') ~ '04-01',
-#     str_detect(mes, 'mayo') ~ '05-01',
-#     str_detect(mes, 'junio') ~ '06-01',
-#     str_detect(mes, 'julio') ~ '07-01',
-#     str_detect(mes, 'agosto') ~ '08-01',
-#     str_detect(mes, 'septiembre') ~ '09-01',
-#     str_detect(mes, 'octubre') ~ '10-01',
-#     str_detect(mes, 'noviembre') ~ '11-01',
-#     str_detect(mes, 'diciembre') ~ '12-01',
-#   )) %>% 
-#   drop_na(mes2) %>% 
-#   cbind(data.frame('anio'=rep(1993:2022,12) %>% sort())) %>% 
-#   mutate(fecha = paste0(anio,'-',mes2)) %>% 
-#   mutate(fecha = as.Date(fecha)) %>% 
-#   filter(fecha >= '2010-01-01', fecha <='2022-12-01') %>% 
-#   select(1,6,3)
-# 
-# write_rds(datos_actividad, 'datos/variables/actividad.rds')
-
-
-
-# Cetes 182d ----------------------------------------------------------------
-# 
-# ##Tomamos la primera decha de cada mes
-# datos_cetes_182d <- readxl::read_excel('datos/cetes 182d.xlsx', range = 'A18:B809') %>% 
-#   rename('fecha'=1, 'cetes_182d'=2) %>% 
-#   mutate(fecha = as.Date(fecha), 
-#          mes_anio = paste0(month(fecha), '_', year(fecha))) %>% 
-#   group_by(mes_anio) %>% 
-#   filter(fecha == min(fecha)) %>% 
-#   ungroup() %>% 
-#   select(-3) %>% 
-#   filter(fecha >= '2010-01-01', fecha <='2022-12-30')
-# 
-# write_rds(datos_cetes_182d, 'datos/variables/cetes_182d.rds')  
-# 
-# datos_cetes_182d_trim <- readxl::read_excel('datos/cetes 182d.xlsx', range = 'A18:B809') %>% 
-#   rename('fecha'=1, 'cetes_182d'=2) %>% 
-#   mutate(fecha2 = as.yearqtr(fecha, "%Y-%m-%d")) %>% 
-#   group_by(fecha2) %>% 
-#   filter(fecha == min(fecha)) %>% 
-#   ungroup() %>% 
-#   filter(fecha2>='2010Q1', fecha2 <= '2022Q4') %>% 
-#   select('fecha' = 3, 2)
-# 
-# write_rds(datos_cetes_182d_trim, 'datos/variables/cetes_182d_trim.rds')
-# 
-# # INPC ----------------------------------------------------------------------
-# 
-# datos_inpc <- readxl::read_excel('datos/inpc.xls', range = 'A5:B642') %>% 
-#   rename('fecha' = 1, 'inpc' = 2) %>% 
-#   mutate(fecha = str_replace(fecha, '/','-')) %>% 
-#   mutate(fecha = as.Date(paste0(fecha,'-01'))) %>% 
-#   filter(fecha >= '2010-01-01', fecha <='2022-12-01')
-# 
-# write_rds(datos_inpc, 'datos/variables/inpc.rds')
-# 
-datos_inpc  <- readxl::read_excel('datos/inpc.xls', range = 'A5:B642') %>%
-  rename('fecha' = 1, 'inpc' = 2) %>%
-  mutate(fecha = str_replace(fecha, '/','-')) %>%
-  mutate(fecha = as.Date(paste0(fecha,'-01'))) %>%
-  mutate(fecha2 = as.yearqtr(fecha, "%Y-%m-%d"))
-
-datos_inpc_last <- datos_inpc %>% 
-  group_by(fecha2) %>%
-  filter(fecha == max(fecha)) %>%
-  ungroup() %>%
-  filter(fecha2>='2001Q1', fecha2 <= '2022Q4') %>%
-  select('fecha' = 3, 2)
-
-write_rds(datos_inpc_last, 'cache/variables/last/inpc_last.rds')
-
 
 
 # INPC mensual --------------------------------------------------------------
@@ -183,37 +98,6 @@ datos_fix_last <- datos_fix %>%
   filter(fecha>='2001 Q1', fecha <= '2022 Q4')
 
 write_rds(datos_fix_last, 'cache/variables/fix.rds')
-
-
-
-# Cetes 28d ----------------------------------------------------------------
-# 
-# ##Tomamos la primera decha de cada mes
-# datos_cetes_28d <- readxl::read_excel('datos/cetes 28d.xlsx', range = 'A18:B2352') %>% 
-#   rename('fecha'=1, 'cetes_28d'=2) %>% 
-#   mutate(fecha = as.Date(fecha), 
-#          mes_anio = paste0(month(fecha), '_', year(fecha))) %>% 
-#   group_by(mes_anio) %>% 
-#   filter(fecha == min(fecha)) %>% 
-#   ungroup() %>% 
-#   select(-3) %>% 
-#   filter(fecha >= '2001-01-01', fecha <='2022-12-30') %>% 
-#   mutate(cetes_28d = as.numeric(cetes_28d))
-# 
-# write_rds(datos_cetes_28d, 'cache/variables/cetes_28d.rds')  
-# 
-# datos_cetes_28d_trim <- readxl::read_excel('datos/cetes 28d.xlsx', range = 'A18:B2352') %>% 
-#   rename('fecha'=1, 'cetes_28d'=2) %>% 
-#   mutate(fecha2 = as.yearqtr(fecha, "%Y-%m-%d")) %>% 
-#   group_by(fecha2) %>% 
-#   filter(fecha == min(fecha)) %>% 
-#   ungroup() %>% 
-#   filter(fecha2>='2001Q1', fecha2 <= '2022Q4') %>% 
-#   select('fecha' = 3, 2) %>% 
-#   mutate(cetes_28d = as.numeric(cetes_28d))
-# 
-# write_rds(datos_cetes_28d_trim, 'cache/variables/cetes_28d_trim.rds')
-
 
 
 # TIIE ----------------------------------------------------------------------
