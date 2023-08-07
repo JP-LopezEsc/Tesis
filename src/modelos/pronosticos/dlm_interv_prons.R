@@ -3,7 +3,6 @@ library(janitor)
 library(lubridate)
 library('MARSS')
 library('broom')
-library(ppcor)
 Sys.setlocale(locale = "es_ES.UTF-8")
 
 source('src/funciones/funciones_dlm.R')
@@ -54,6 +53,41 @@ ggplot(datos_efectivo, aes(fecha, efectivo)) +
   ylab("Efectivo")
 
 
+
+# Analisis cambio por pandemia ----------------------------------------------
+
+# En el informe trimestral de 2020 Q1 de Banxico ya se había detectado el
+# incremento de la demanda de dinero por la incertidumbre de la pandemia.
+# Usando datos hasta 2020 Q1 se propone una intervención para 2020 Q2
+
+df_dif_q4_q1 <- datos_efectivo %>% 
+  mutate(dif = efectivo - lag(efectivo)) %>% 
+    filter(fecha - round(fecha) == 0) %>% 
+  drop_na()
+
+
+ggplot(df_dif_q4_q1, aes(x = fecha, y = dif)) +
+  geom_col() +
+  theme_bw()
+
+mean_dif_q4_q1 <- df_dif_q4_q1 %>% 
+  filter(fecha < 2020) %>% 
+  summarise(mean(dif)) %>% 
+  as.numeric()
+
+dif_q4_q1_2019 <- df_dif_q4_q1 %>% 
+  filter(fecha == 2019) %>% 
+  dplyr::select(dif) %>% 
+  as.numeric()
+
+dif_q4_q1_2020 <- df_dif_q4_q1 %>% 
+  filter(fecha == 2020) %>% 
+  dplyr::select(dif) %>% 
+  as.numeric()
+
+# Agregar el siguiente valor al intercepto en la intervencion
+
+dif_q4_q1_2020 - dif_q4_q1_2019
 
 # Estacionalidad ------------------------------------------------------------
 
@@ -116,12 +150,15 @@ a_34
 R_34
 
 a_34_int <- a_34
-a_34_int[1,] <- 0.1
+a_34_int[1,] <- a_34[1,] + dif_q4_q1_2020 - dif_q4_q1_2019
 a_34_int
 
 R_34_int <- R_34
-R_34_int[1,1] <- R_34[1,1]*2
+R_34_int[1,1] <- R_34[1,1]*10
 R_34_int
+
+qnorm(c(0.025,0.975), mean = a_34_int[1,], sd = sqrt(R_34[1,1]))
+qnorm(c(0.025,0.975), mean = a_34_int[1,], sd = sqrt(R_34_int[1,1]))
 
 list_interv <- list("t_int" = list(34),
                     "at_int" = list(a_34_int),
@@ -136,6 +173,9 @@ modelo_dlm_interv <- actualizacion_dlm_V_desc(y = datos_efectivo$efectivo,
                                               S0 = S0, 
                                               n0 = 44,
                                               lista_interv = list_interv)
+
+# Guarda modelo
+# modelo_dlm_interv %>% write_rds('cache/modelos/modelo_dlm_interv.rds')
 
 df_dlm_interv <- data.frame("fecha" = datos_efectivo %>% dplyr::select(fecha), 
                             "y_real" = datos_efectivo$efectivo, 
@@ -222,7 +262,7 @@ mean(resids_interv$resids^2)
 # https://www.banxico.org.mx/publicaciones-y-prensa/encuestas-sobre-las-expectativas-de-los-especialis/encuestas-expectativas-del-se.html
 # Esos pronósticos de Banxico se guardaron en el archivo 'cache/variables/prons_banxico.rds'
 
-prons_F_banxico <- read_rds('cache/variables/prons_banxico.rds')
+prons_F_banxico <- read_rds('cache/variables/prons_banxico.rds')[1:44]
 
 
 k_int <- 8

@@ -205,7 +205,7 @@ pronosticos_k_pasos <- function(prons_F, k, modelo,
   G <- modelo$G
   W <- modelo$W
   #La iteracion t contiene info hasta D_{t-1}
-  for (t in 1:(nrow(datos_F) - k + 1)){
+  for (t in 1:(length(prons_F) - k + 1)){
     
     if(t==1){
       at_0 <- modelo$m0

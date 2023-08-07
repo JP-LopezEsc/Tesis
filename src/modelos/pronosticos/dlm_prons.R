@@ -105,6 +105,9 @@ modelo_dlm <- actualizacion_dlm_V_desc(y = datos_efectivo$efectivo,
                                        lista_interv = list())
 
 
+# Guarda modelo
+# modelo_dlm %>% write_rds('cache/modelos/modelo_dlm.rds')
+
 df_dlm_efectivo <- data.frame("fecha" = datos_efectivo %>% dplyr::select(fecha), 
                            "y_real" = datos_efectivo$efectivo, 
                            "y_pronostico" = modelo_dlm$ft %>% unlist(), 
@@ -197,7 +200,7 @@ RSquared
 # https://www.banxico.org.mx/publicaciones-y-prensa/encuestas-sobre-las-expectativas-de-los-especialis/encuestas-expectativas-del-se.html
 # Esos pronósticos de Banxico se guardaron en el archivo 'cache/variables/prons_banxico.rds'
 
-prons_F_banxico <- read_rds('cache/variables/prons_banxico.rds')
+prons_F_banxico <- read_rds('cache/variables/prons_banxico.rds')[1:44]
   
 k <- 8
 
