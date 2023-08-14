@@ -79,7 +79,7 @@ write_rds(df_medidas,
 
 
 # Para mayor comodidad, guardar pdf en carpeta docs
-pdf("docs/dlm_medidas.pdf", height=11, width=10, )
+pdf("docs/dlm_medidas.pdf", height=11, width=10)
 grid.table(df_medidas  %>% 
              mutate_if(is.numeric, ~sprintf("%.2f",.)))
 dev.off()

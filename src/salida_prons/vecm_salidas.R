@@ -115,7 +115,7 @@ for(k in 1:8){
 write_rds(df_medidas, 'cache/resultados/vecm/vecm_medidas.rds')
 
 # Para mayor comodidad, guardar pdf en carpeta docs
-pdf("docs/vecm_medidas.pdf", height=11, width=10, )
+pdf("docs/vecm_medidas.pdf", height=11, width=10)
 grid.table(df_medidas  %>% 
              mutate_if(is.numeric, ~sprintf("%.2f",.)))
 dev.off()
