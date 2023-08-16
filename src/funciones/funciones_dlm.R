@@ -75,7 +75,7 @@ actualizacion_dlm_V_desc <- function(y, variables_F, m0, C0, G, W, S0, n0, lista
               "CI_sup" = lista_CI_sup, "mt" = lista_mt, "Ct" = lista_Ct,
               "St" = lista_St, 'm0' = m0, 'C0' = C0,
               'G' = G, 'W' = W, 'S0' = S0, 'lista_interv' = lista_interv,
-              'n0' = n0))
+              'n0' = n0, 'nT' = nt, 'y' = y, 'variables_F' = variables_F))
 }
 
 
@@ -236,3 +236,98 @@ pronosticos_k_pasos <- function(prons_F, k, modelo,
   return(list("ft_k" = lista_ft_k, 
               "Qt_k" = lista_Qt_k, "CI_inf" = lista_CI_inf, "CI_sup" = lista_CI_sup))
 }
+
+
+suavizamiento_V_desc <- function(modelo){
+
+  error_varianza <- function(x) {
+    if(any (diag(x)<0)) stop ('Elementos del parametro de escala o varianzas deben ser positivos')
+  }
+ 
+  lista_ft_k_filt <- list()
+  lista_at_k_filt <- list()
+  lista_Rt_k_filt <- list()
+  lista_resp_med_esc <- list()
+  lista_CI_inf <- list()
+  lista_CI_sup <- list()
+  
+  G <- modelo$G
+  lista_interv <- modelo$lista_interv
+  nt <-modelo$nT
+  
+  #Se calculan las distribuciones filtradas para k = T
+  
+  at_k_filt_mas_1 <- modelo$mt[[length(modelo$y)]]
+  Rt_k_filt_mas_1 <- modelo$Ct[[length(modelo$y)]]
+  St <- modelo$St[[length(modelo$y)]]
+  
+  Ft <- as.numeric(modelo$variables_F[length(modelo$y),]) 
+  lista_ft_k_filt[[length(modelo$y)]] <- t(Ft) %*% at_k_filt_mas_1
+  lista_at_k_filt[[length(modelo$y)]] <- at_k_filt_mas_1
+  lista_Rt_k_filt[[length(modelo$y)]] <- Rt_k_filt_mas_1
+  lista_resp_med_esc[[length(modelo$y)]] <- t(Ft) %*% Rt_k_filt_mas_1 %*% Ft
+  lista_CI_inf[[length(modelo$y)]] <- qst(0.025, nu = nt, mu = lista_ft_k_filt[[length(modelo$y)]],
+                                         sigma = sqrt(lista_resp_med_esc[[length(modelo$y)]]))
+  lista_CI_sup[[length(modelo$y)]] <- qst(0.975, nu = nt, mu = lista_ft_k_filt[[length(modelo$y)]],
+                                         sigma = sqrt(lista_resp_med_esc[[length(modelo$y)]]))
+  interv <- F
+  
+  error_varianza(Rt_k_filt_mas_1)
+  error_varianza(St)
+  
+  for(i in length(modelo$y):2){
+    #Se calculan las distribuciones filtradas para i-1. De lo mas reciente a lo mas viejo
+    
+    if(i %in% lista_interv$t_int){
+      at_int <- lista_interv$at_int[[match(i,lista_interv$t_int)]]
+      Rt_int <- lista_interv$Rt_int[[match(i,lista_interv$t_int)]]
+      Rt<- G  %*% modelo$Ct[[i-1]] %*% t(G)
+      Ut <- t(chol(Rt_int))
+      Zt <- t(chol(Rt))
+      Kt <- Ut %*% solve(Zt)
+      Gt_int <- Kt %*% G
+      interv <- T
+    }
+    
+    Ct_k <- modelo$Ct[[i-1]]
+    Rt_k_mas_1 <- modelo$Rt[[i]]
+    mt_k <- modelo$mt[[i-1]]
+    at_k_mas_1 <- modelo$at[[i]]
+    St_k_mas_1 <- modelo$St[[i]]
+    St_k <- modelo$St[[i-1]]
+    
+    Bt_k <- Ct_k %*% t(`if`(interv,Gt_int, G)) %*% solve(Rt_k_mas_1)
+    at_k_filt <- mt_k + Bt_k %*% (at_k_filt_mas_1 - at_k_mas_1)
+    Rt_k_filt <- Ct_k + Bt_k %*% (Rt_k_filt_mas_1 - Rt_k_mas_1) %*% t(Bt_k)
+    
+    Ft_k <- as.numeric(modelo$variables_F[i-1,])
+    ft_k_filt <- t(Ft_k) %*% at_k_filt
+    resp_med_esc <- (St/St_k)*(t(Ft_k) %*% Rt_k_filt %*% Ft_k)
+    CI <- c(qst(0.025, nu = nt, mu = ft_k_filt, sigma = sqrt(resp_med_esc)),
+            qst(0.975, nu = nt, mu = ft_k_filt, sigma = sqrt(resp_med_esc)))
+    
+    error_varianza(Rt_k_mas_1)
+    error_varianza(Ct_k)
+    error_varianza(St_k_mas_1)
+    error_varianza(St_k)
+    error_varianza(Rt_k_filt)
+    
+    lista_ft_k_filt[[i-1]] <- ft_k_filt
+    lista_at_k_filt[[i-1]] <- at_k_filt
+    lista_Rt_k_filt[[i-1]] <- Rt_k_filt
+    lista_resp_med_esc[[i-1]] <- resp_med_esc
+    lista_CI_inf[[i-1]] <- CI[1]
+    lista_CI_sup[[i-1]] <- CI[2]
+    
+    at_k_filt_mas_1 <- at_k_filt
+    Rt_k_filt_mas_1 <- Rt_k_filt
+    interv <- F
+  }
+  
+  return(list("ft_k_filt" = lista_ft_k_filt, "at_k_filt" = lista_at_k_filt,
+              "Rt_k_filt" = lista_Rt_k_filt, "resp_media_esc" = lista_resp_med_esc, 
+              "CI_inf" = lista_CI_inf, "CI_sup" = lista_CI_sup))
+}
+
+
+

@@ -13,7 +13,7 @@ prons_F <- read_rds('cache/variables/prons_banxico.rds')[[45]]
 
 modelo_prons <- pronosticos(variables_F = prons_F, per_futuros = 8, at_0 = dlm_interv$at[[44]],
             Rt_0 = dlm_interv$Rt[[44]], G = dlm_interv$G, W = dlm_interv$W, 
-            St = dlm_interv$St[[44]], nt = 88)
+            St = dlm_interv$St[[44]], nt = dlm_interv$nT)
 
 
 df_prons <- data.frame("fecha" = datos_efectivo$fecha[81:88] + 2, 
@@ -64,6 +64,6 @@ df_prons2$fecha <- as.yearqtr(df_prons2$fecha, format = '%Y-Q%q')
 
 pdf("docs/prons_futuros.pdf", height=11, width=10)
 grid.table(df_prons2  %>% 
-             select(-efectivo) %>% 
+             dplyr::select(-efectivo) %>% 
              mutate_if(is.numeric, ~sprintf("%.2f",.)))
 dev.off()
