@@ -1,11 +1,11 @@
 
 library(tidyverse)
+library(zoo)
 
-
-
+datos_efectivo <- read_rds('cache/variables/efectivo.rds') %>% 
+  filter(fecha > 2011.75) 
 
 # DLM -----------------------------------------------------------------------
-
 
 
 df_dlm_suav <- read_rds('cache/resultados/dlm/dlm_suavizamiento.rds')
@@ -30,27 +30,39 @@ ggplot(data = df_dlm_suav, aes(x = fecha)) +
   theme(axis.text.x = element_text(size = 20),
         axis.text.y = element_text(size = 20),
         axis.title = element_text(size = 22),
-        legend.text = element_text(size=20)) 
+        legend.text = element_text(size=20)) +
+  scale_x_yearqtr(format="%YT%q", n=5)
+
+ggsave('graphs/modelos/dlm/dlm_suavizado.png',  width = 11.7, height = 6)
 
 
+dlm_suav <- read_rds('cache/modelos/modelo_dlm_suavizado.rds')
+
+df_dlm_params <- data.frame(reduce(dlm_suav$at_k_filt, cbind) %>% t(), 
+                        fecha = datos_efectivo %>% dplyr::select(fecha))  %>% 
+  rename(Intercepto = X1, PIB = X2,  INPC = X3, Trimestre = X4) %>% 
+  pivot_longer(names_to = "parametro", values_to = "valor", 
+               cols = c(Intercepto, PIB, INPC,  Trimestre))
+
+ggplot(df_dlm_params, aes(x=fecha, y = valor)) +
+  geom_line() +
+  facet_wrap(~parametro, nrow = 4, scales = "free") +
+  theme_bw()  +
+  ylab("Valor esperado") +
+  xlab("Fecha") +
+  theme(axis.text.x = element_text(size = 20),
+        axis.text.y = element_text(size = 20),
+        axis.title = element_text(size = 22),
+        strip.text = element_text(size=20)) +
+  scale_x_yearqtr(format="%YT%q", n=5)
 
 
-
-
-
-
-
-
-
-
+ggsave('graphs/modelos/dlm/dlm_params_suavizado.png',  width = 11.7, height = 10)
 
 
 
 
 # DLM interv ----------------------------------------------------------------
-
-
-
 
 df_dlm_interv_suav <- read_rds('cache/resultados/dlm_interv/dlm_interv_suavizamiento.rds')
 
@@ -74,7 +86,32 @@ ggplot(data = df_dlm_interv_suav, aes(x = fecha)) +
   theme(axis.text.x = element_text(size = 20),
         axis.text.y = element_text(size = 20),
         axis.title = element_text(size = 22),
-        legend.text = element_text(size=20)) 
+        legend.text = element_text(size=20)) +
+  scale_x_yearqtr(format="%YT%q", n=5)
+
+ggsave('graphs/modelos/dlm_interv/dlm_interv_suavizado.png',  width = 11.7, height = 6)
 
 
+dlm_interv_suav <- read_rds('cache/modelos/modelo_dlm_interv_suavizado.rds')
+
+df_dlm_interv_params <- data.frame(reduce(dlm_interv_suav$at_k_filt, cbind) %>% t(), 
+                            fecha = datos_efectivo %>% dplyr::select(fecha))  %>% 
+  rename(Intercepto = X1, PIB = X2,  INPC = X3, Trimestre = X4) %>% 
+  pivot_longer(names_to = "parametro", values_to = "valor", 
+               cols = c(Intercepto, PIB, INPC,  Trimestre))
+
+ggplot(df_dlm_interv_params, aes(x=fecha, y = valor)) +
+  geom_line() +
+  facet_wrap(~parametro, nrow = 4, scales = "free") +
+  theme_bw()  +
+  ylab("Valor esperado") +
+  xlab("Fecha") +
+  theme(axis.text.x = element_text(size = 20),
+        axis.text.y = element_text(size = 20),
+        axis.title = element_text(size = 22),
+        strip.text = element_text(size=20)) +
+  scale_x_yearqtr(format="%YT%q", n=5)
+
+
+ggsave('graphs/modelos/dlm_interv/dlm_interv_params_suavizado.png',  width = 11.7, height = 10)
  

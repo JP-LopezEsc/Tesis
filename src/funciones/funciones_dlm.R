@@ -281,7 +281,7 @@ suavizamiento_V_desc <- function(modelo){
     if(i %in% lista_interv$t_int){
       at_int <- lista_interv$at_int[[match(i,lista_interv$t_int)]]
       Rt_int <- lista_interv$Rt_int[[match(i,lista_interv$t_int)]]
-      Rt<- G  %*% modelo$Ct[[i-1]] %*% t(G)
+      Rt<- G  %*% modelo$Ct[[i-1]] %*% t(G) + modelo$W
       Ut <- t(chol(Rt_int))
       Zt <- t(chol(Rt))
       Kt <- Ut %*% solve(Zt)

@@ -21,6 +21,8 @@ df_dlm_suav <- data.frame("fecha" = datos_efectivo %>% dplyr::select(fecha),
                                  "CI_sup" = exp(modelo_dlm_suav$CI_sup %>% unlist())) %>% 
   mutate(fecha = as.numeric(fecha))
 
+write_rds(modelo_dlm_suav, 'cache/modelos/modelo_dlm_suavizado.rds')
+
 write_rds(df_dlm_suav,'cache/resultados/dlm/dlm_suavizamiento.rds')
 
 
@@ -39,6 +41,8 @@ df_dlm_interv_suav <- data.frame("fecha" = datos_efectivo %>% dplyr::select(fech
                                  "CI_inf" = exp(modelo_dlm_interv_suav$CI_inf %>% unlist()),
                                  "CI_sup" = exp(modelo_dlm_interv_suav$CI_sup %>% unlist())) %>% 
   mutate(fecha = as.numeric(fecha))
+
+write_rds(modelo_dlm_interv_suav, 'cache/modelos/modelo_dlm_interv_suavizado.rds')
 
 write_rds(df_dlm_interv_suav,'cache/resultados/dlm_interv/dlm_interv_suavizamiento.rds')
 
