@@ -40,9 +40,10 @@ dlm_suav <- read_rds('cache/modelos/modelo_dlm_suavizado.rds')
 
 df_dlm_params <- data.frame(reduce(dlm_suav$at_k_filt, cbind) %>% t(), 
                         fecha = datos_efectivo %>% dplyr::select(fecha))  %>% 
-  rename(Intercepto = X1, PIB = X2,  INPC = X3, Trimestre = X4) %>% 
+  rename(Intercepto = X1, PIB = X2,  Inflación = X3, `Trimestre en turno` = X4) %>% 
   pivot_longer(names_to = "parametro", values_to = "valor", 
-               cols = c(Intercepto, PIB, INPC,  Trimestre))
+               cols = c(Intercepto, PIB, Inflación, `Trimestre en turno`)) %>% 
+  mutate(across(parametro, factor, levels=c("Intercepto","PIB","Inflación", "Trimestre en turno")))
 
 ggplot(df_dlm_params, aes(x=fecha, y = valor)) +
   geom_line() +
@@ -96,9 +97,10 @@ dlm_interv_suav <- read_rds('cache/modelos/modelo_dlm_interv_suavizado.rds')
 
 df_dlm_interv_params <- data.frame(reduce(dlm_interv_suav$at_k_filt, cbind) %>% t(), 
                             fecha = datos_efectivo %>% dplyr::select(fecha))  %>% 
-  rename(Intercepto = X1, PIB = X2,  INPC = X3, Trimestre = X4) %>% 
+  rename(Intercepto = X1, PIB = X2,  Inflación = X3, `Trimestre en turno` = X4) %>% 
   pivot_longer(names_to = "parametro", values_to = "valor", 
-               cols = c(Intercepto, PIB, INPC,  Trimestre))
+               cols = c(Intercepto, PIB, Inflación, `Trimestre en turno`)) %>% 
+  mutate(across(parametro, factor, levels=c("Intercepto","PIB","Inflación", "Trimestre en turno")))
 
 ggplot(df_dlm_interv_params, aes(x=fecha, y = valor)) +
   geom_line() +
