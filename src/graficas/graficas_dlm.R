@@ -14,9 +14,10 @@ modelo_dlm <- read_rds('cache/modelos/modelo_dlm.rds')
 
 df_params <- data.frame(reduce(modelo_dlm$mt, cbind) %>% t(), 
                         fecha = datos_efectivo %>% dplyr::select(fecha))  %>% 
-  rename(Intercepto = X1, PIB = X2,  INPC = X3, Trimestre = X4) %>% 
+  rename(Intercepto = X1, PIB = X2,  Inflación = X3, `Trimestre en turno` = X4) %>% 
   pivot_longer(names_to = "parametro", values_to = "valor", 
-               cols = c(Intercepto, PIB, INPC,  Trimestre))
+               cols = c(Intercepto, PIB, Inflación, `Trimestre en turno`)) %>% 
+  mutate(across(parametro, factor, levels=c("Intercepto","PIB","Inflación", "Trimestre en turno")))
 
 ggplot(df_params, aes(x=fecha, y = valor)) +
   geom_line() +
