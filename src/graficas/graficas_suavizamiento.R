@@ -1,6 +1,7 @@
 
 library(tidyverse)
 library(zoo)
+library(latex2exp)
 
 datos_efectivo <- read_rds('cache/variables/efectivo.rds') %>% 
   filter(fecha > 2011.75) 
@@ -49,7 +50,7 @@ ggplot(df_dlm_params, aes(x=fecha, y = valor)) +
   geom_line() +
   facet_wrap(~parametro, nrow = 4, scales = "free") +
   theme_bw()  +
-  ylab("Valor esperado") +
+  ylab(TeX("Valores de $\\textbf{a}_{44}(-k)$")) +
   xlab("Fecha") +
   theme(axis.text.x = element_text(size = 20),
         axis.text.y = element_text(size = 20),
@@ -106,7 +107,7 @@ ggplot(df_dlm_interv_params, aes(x=fecha, y = valor)) +
   geom_line() +
   facet_wrap(~parametro, nrow = 4, scales = "free") +
   theme_bw()  +
-  ylab("Valor esperado") +
+  ylab(TeX("Valores de $\\textbf{a}_{44}(-k)$")) +
   xlab("Fecha") +
   theme(axis.text.x = element_text(size = 20),
         axis.text.y = element_text(size = 20),

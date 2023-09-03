@@ -34,4 +34,4 @@ ggplot(datos_dinero, aes(fecha, dinero)) +
   xlab("Año") +
   ylab("Circulación")
 
-ggsave(filename = "graphs/introduccion/1.1_dinero.png", width = 11.7, height = 6)
+ggsave(filename = "graphs/otros/1.1_dinero.png", width = 11.7, height = 6)

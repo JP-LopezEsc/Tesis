@@ -5,6 +5,7 @@
 
 library(tidyverse)
 library(zoo)
+library(latex2exp)
 
 modelo_dlm_interv <- read_rds('cache/modelos/modelo_dlm_interv.rds')
 
@@ -24,7 +25,7 @@ ggplot(df_interv_params, aes(x=fecha, y = valor)) +
   geom_line() +
   facet_wrap(~parametro, nrow = 4, scales = "free") +
   theme_bw()  +
-  ylab("Valor esperado") +
+  ylab(TeX("Valores de $\\textbf{m}_t$")) +
   xlab("Fecha") +
   theme(axis.text.x = element_text(size = 20),
         axis.text.y = element_text(size = 20),
@@ -41,7 +42,7 @@ df_St_interv <- data.frame(modelo_dlm_interv$St %>% unlist(),
 ggplot(df_St_interv, aes(x=fecha, y = St)) +
   geom_line(size = 1) +
   theme_bw()  +
-  ylab("St") +
+  ylab(TeX("$S_t$")) +
   xlab("Fecha") +
   theme(axis.text.x = element_text(size = 20),
         axis.text.y = element_text(size = 20),

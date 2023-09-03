@@ -3,6 +3,7 @@ library(janitor)
 library(lubridate)
 library('MARSS')
 library('broom')
+library(LaplacesDemon)
 Sys.setlocale(locale = "es_ES.UTF-8")
 
 source('src/funciones/funciones_dlm.R')
@@ -69,11 +70,6 @@ df_dif_q4_q1 <- datos_efectivo %>%
 ggplot(df_dif_q4_q1, aes(x = fecha, y = dif)) +
   geom_col() +
   theme_bw()
-
-mean_dif_q4_q1 <- df_dif_q4_q1 %>% 
-  filter(fecha < 2020) %>% 
-  summarise(mean(dif)) %>% 
-  as.numeric()
 
 dif_q4_q1_2019 <- df_dif_q4_q1 %>% 
   filter(fecha == 2019) %>% 
@@ -157,8 +153,8 @@ R_34_int <- R_34
 R_34_int[1,1] <- R_34[1,1]*10
 R_34_int
 
-qnorm(c(0.025,0.975), mean = a_34_int[1,], sd = sqrt(R_34[1,1]))
-qnorm(c(0.025,0.975), mean = a_34_int[1,], sd = sqrt(R_34_int[1,1]))
+qst(c(0.025,0.975), nu = 33, mu = a_34[1,], sigma = sqrt(R_34[1,1]))
+qst(c(0.025,0.975), nu=33, mu = a_34_int[1,], sigma = sqrt(R_34_int[1,1]))
 
 list_interv <- list("t_int" = list(34),
                     "at_int" = list(a_34_int),
