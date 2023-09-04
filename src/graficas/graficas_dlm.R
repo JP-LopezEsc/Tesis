@@ -32,7 +32,7 @@ ggplot(df_params, aes(x=fecha, y = valor)) +
         strip.text = element_text(size=20)) +
   scale_x_yearqtr(format="%YT%q", n=5)
 
-ggsave(filename = "graphs/modelos/dlm/dlm_params.png", width = 11.7, height = 10)
+ggsave(filename = "graphs/modelos/dlm/dlm_params.pdf", width = 11.7, height = 10)
 
 
 df_St <- data.frame(modelo_dlm$St %>% unlist(), 
@@ -51,7 +51,7 @@ ggplot(df_St, aes(x=fecha, y = St)) +
   scale_x_yearqtr(format="%YT%q", n=5)
 
 
-ggsave(filename = "graphs/modelos/dlm/dlm_St.png", width = 11.7, height = 6)
+ggsave(filename = "graphs/modelos/dlm/dlm_St.pdf", width = 11.7, height = 6)
 
 
 
@@ -84,6 +84,6 @@ for(k in 1:8){
           legend.text = element_text(size=20)) +
     scale_x_yearqtr(format="%YT%q", n=5)
   
-  ggsave(paste0('graphs/modelos/dlm/pronosticos/dlm_prons_',k,'_pasos.png'))
+  ggsave(paste0('graphs/modelos/dlm/pronosticos/dlm_prons_',k,'_pasos.pdf'))
   
 }

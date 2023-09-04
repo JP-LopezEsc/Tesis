@@ -33,7 +33,7 @@ ggplot(df_interv_params, aes(x=fecha, y = valor)) +
         strip.text = element_text(size=20)) +
   scale_x_yearqtr(format="%YT%q", n=5)
 
-ggsave(filename = "graphs/modelos/dlm_interv/dlm_interv_params.png", width = 11.7, height = 10)
+ggsave(filename = "graphs/modelos/dlm_interv/dlm_interv_params.pdf", width = 11.7, height = 10)
 
 df_St_interv <- data.frame(modelo_dlm_interv$St %>% unlist(), 
                            fecha = datos_efectivo %>% dplyr::select(fecha)) %>% 
@@ -51,7 +51,7 @@ ggplot(df_St_interv, aes(x=fecha, y = St)) +
   ylim(c(2e-06, 3.5e-06)) +
   scale_x_yearqtr(format="%YT%q", n=5)
 
-ggsave(filename = "graphs/modelos/dlm_interv/dlm_interv_St.png", width = 11.7, height = 6)
+ggsave(filename = "graphs/modelos/dlm_interv/dlm_interv_St.pdf", width = 11.7, height = 6)
 
 
 # Pronósticos ---------------------------------------------------------------
@@ -83,6 +83,7 @@ for(k in 1:8){
           legend.text = element_text(size=20)) +
     scale_x_yearqtr(format="%YT%q", n=5)
   
-  ggsave(paste0('graphs/modelos/dlm_interv/pronosticos/dlm_interv_prons_',k,'_pasos.png'))
+  ggsave(paste0('graphs/modelos/dlm_interv/pronosticos/dlm_interv_prons_',k,'_pasos.pdf'))
   
 }
+

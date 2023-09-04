@@ -55,7 +55,7 @@ ggplot(data = df_completo, aes(x = fecha)) +
         legend.text = element_text(size=20)) +
   scale_x_yearqtr(format="%YT%q", n=5)
 
-ggsave('graphs/modelos/dlm_interv/prons_futuros.png', width = 11.7, height = 6)  
+ggsave('graphs/modelos/dlm_interv/prons_futuros.pdf', width = 11.7, height = 6)  
 
 # Para mayor comodidad, guardar pdf con pronosticos en carpeta docs
 

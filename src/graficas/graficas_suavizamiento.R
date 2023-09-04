@@ -34,7 +34,7 @@ ggplot(data = df_dlm_suav, aes(x = fecha)) +
         legend.text = element_text(size=20)) +
   scale_x_yearqtr(format="%YT%q", n=5)
 
-ggsave('graphs/modelos/dlm/dlm_suavizado.png',  width = 11.7, height = 6)
+ggsave('graphs/modelos/dlm/dlm_suavizado.pdf',  width = 11.7, height = 6)
 
 
 dlm_suav <- read_rds('cache/modelos/modelo_dlm_suavizado.rds')
@@ -59,7 +59,7 @@ ggplot(df_dlm_params, aes(x=fecha, y = valor)) +
   scale_x_yearqtr(format="%YT%q", n=5)
 
 
-ggsave('graphs/modelos/dlm/dlm_params_suavizado.png',  width = 11.7, height = 10)
+ggsave('graphs/modelos/dlm/dlm_params_suavizado.pdf',  width = 11.7, height = 10)
 
 
 
@@ -91,7 +91,7 @@ ggplot(data = df_dlm_interv_suav, aes(x = fecha)) +
         legend.text = element_text(size=20)) +
   scale_x_yearqtr(format="%YT%q", n=5)
 
-ggsave('graphs/modelos/dlm_interv/dlm_interv_suavizado.png',  width = 11.7, height = 6)
+ggsave('graphs/modelos/dlm_interv/dlm_interv_suavizado.pdf',  width = 11.7, height = 6)
 
 
 dlm_interv_suav <- read_rds('cache/modelos/modelo_dlm_interv_suavizado.rds')
@@ -116,5 +116,5 @@ ggplot(df_dlm_interv_params, aes(x=fecha, y = valor)) +
   scale_x_yearqtr(format="%YT%q", n=5)
 
 
-ggsave('graphs/modelos/dlm_interv/dlm_interv_params_suavizado.png',  width = 11.7, height = 10)
+ggsave('graphs/modelos/dlm_interv/dlm_interv_params_suavizado.pdf',  width = 11.7, height = 10)
  

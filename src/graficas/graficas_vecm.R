@@ -34,6 +34,6 @@ for(k in 1:8){
           legend.text = element_text(size=20)) +
     scale_x_yearqtr(format="%YT%q", n=5)
   
-  ggsave(paste0('graphs/modelos/vecm/vecm_prons_',k,'_pasos.png'))
+  ggsave(paste0('graphs/modelos/vecm/vecm_prons_',k,'_pasos.pdf'))
   
 }
