@@ -30,7 +30,8 @@ list_interv <- list("t_int" = list(34),
 
 
 df_medidas <- data.frame('k' = rep(NA,8), 'error_medio' = rep(NA,8), 'MSE' = rep(NA,8), 
-                         'MAE' = rep(NA,8), 'porcent_MAPE' = rep(NA,8), 'theil_U' = rep(NA,8))
+                         'MAE' = rep(NA,8), 'porcent_MAPE' = rep(NA,8), 'theil_U' = rep(NA,8),
+                         'porcent_en_interv' = rep(NA,8))
 
 
 for(k in 1:8){
@@ -73,6 +74,13 @@ for(k in 1:8){
   fpe <- (df_theul_U$y_pronostico - df_theul_U$y_t_real) / df_theul_U$y_t_real
   ape <- (df_theul_U$y_t_mas_k_real - df_theul_U$y_t_real) / df_theul_U$y_t_real
   df_medidas$theil_U[k] <- sqrt(sum((fpe - ape)^2)/sum(ape^2))
+  
+  porcent_interv <- df_prons_dlm_interv %>% 
+    mutate(dentro_intervalo = ifelse(CI_inf <= y_real & y_real <= CI_sup,1,0)) %>% 
+    pull(dentro_intervalo) %>% 
+    mean()*100
+  
+  df_medidas$porcent_en_interv[k] <- porcent_interv
   
   write_rds(df_prons_dlm_interv,
     paste0('cache/resultados/dlm_interv/dlm_interv_prons_', k, '_pasos.rds'))

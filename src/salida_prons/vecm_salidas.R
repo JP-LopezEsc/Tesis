@@ -62,8 +62,8 @@ pronosticos_k_pasos_vecm <- function(datos, datos_estacionalidad, k, inicio, r, 
 }
 
 df_medidas <- data.frame('k' = rep(NA,8), 'error_medio' = rep(NA,8), 'MSE' = rep(NA,8), 
-                         'MAE' = rep(NA,8), 'porcent_MAPE' = rep(NA,8), 'theil_U' = rep(NA,8))
-
+                         'MAE' = rep(NA,8), 'porcent_MAPE' = rep(NA,8), 'theil_U' = rep(NA,8),
+                         'porcent_en_interv' = rep(NA,8))
 
 datos_efectivo_prons <- read_rds('cache/variables/efectivo.rds') %>% 
   filter(fecha > 2011.75) 
@@ -108,10 +108,18 @@ for(k in 1:8){
   ape <- (df_theul_U$y_t_mas_k_real - df_theul_U$y_t_real) / df_theul_U$y_t_real
   df_medidas$theil_U[k] <- sqrt(sum((fpe - ape)^2)/sum(ape^2))
   
+  porcent_interv <- df_prons_vecm %>% 
+    mutate(dentro_intervalo = ifelse(CI_inf <= y_real & y_real <= CI_sup,1,0)) %>% 
+    pull(dentro_intervalo) %>% 
+    mean()*100
+  
+  df_medidas$porcent_en_interv[k] <- porcent_interv
+  
   write_rds(df_prons_vecm,
             paste0('cache/resultados/vecm/vecm_prons_', k, '_pasos.rds'))
 }
 
+df_medidas
 write_rds(df_medidas, 'cache/resultados/vecm/vecm_medidas.rds')
 
 # Para mayor comodidad, guardar pdf en carpeta docs

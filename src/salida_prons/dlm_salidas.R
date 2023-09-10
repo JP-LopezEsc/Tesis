@@ -12,7 +12,7 @@ datos_efectivo <- read_rds('cache/variables/efectivo.rds') %>%
   filter(fecha > 2011.75) 
 
 
-# Se lee el dlm intervenido obtenido en 'scr/modelos/pronosticos/dlm_prons.R'
+# Se lee el dlm obtenido en 'scr/modelos/pronosticos/dlm_prons.R'
 modelo_dlm <- read_rds('cache/modelos/modelo_dlm.rds')
 
 # El VECM hace sus propios pronósticos del PIB y de la inflación. Para que sea justa
@@ -24,7 +24,8 @@ prons_F_banxico <- read_rds('cache/variables/prons_banxico.rds')[1:44]
 
 
 df_medidas <- data.frame('k' = rep(NA,8), 'error_medio' = rep(NA,8), 'MSE' = rep(NA,8), 
-                         'MAE' = rep(NA,8), 'porcent_MAPE' = rep(NA,8), 'theil_U' = rep(NA,8))
+                         'MAE' = rep(NA,8), 'porcent_MAPE' = rep(NA,8), 'theil_U' = rep(NA,8),
+                         'porcent_en_interv' = rep(NA,8))
 
 
 for(k in 1:8){
@@ -67,6 +68,14 @@ for(k in 1:8){
   fpe <- (df_theul_U$y_pronostico - df_theul_U$y_t_real) / df_theul_U$y_t_real
   ape <- (df_theul_U$y_t_mas_k_real - df_theul_U$y_t_real) / df_theul_U$y_t_real
   df_medidas$theil_U[k] <- sqrt(sum((fpe - ape)^2)/sum(ape^2))
+  
+  
+  porcent_interv <- df_prons_dlm %>% 
+    mutate(dentro_intervalo = ifelse(CI_inf <= y_real & y_real <= CI_sup,1,0)) %>% 
+    pull(dentro_intervalo) %>% 
+    mean()*100
+  
+  df_medidas$porcent_en_interv[k] <- porcent_interv
   
   write_rds(df_prons_dlm,
             paste0('cache/resultados/dlm/dlm_prons_', k, '_pasos.rds'))
