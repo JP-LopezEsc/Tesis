@@ -1,6 +1,7 @@
 library(LaplacesDemon)
 
 
+# Funcion DLM para varianza de observacion V desconocida
 #Se asume que Gt y Wt son ctes conocidas para toda t.
 actualizacion_dlm_V_desc <- function(y, variables_F, m0, C0, G, W, S0, n0, lista_interv){
   
@@ -80,7 +81,7 @@ actualizacion_dlm_V_desc <- function(y, variables_F, m0, C0, G, W, S0, n0, lista
 
 
 
-
+#Funcion DLM para varianza de observacion V conocida
 #Se asume que Gt, Vt y Wt son ctes conocidas para toda t.
 actualizacion_dlm <- function(y, variables_F, m0, C0, G, W, V, lista_interv){
 
@@ -148,7 +149,6 @@ actualizacion_dlm <- function(y, variables_F, m0, C0, G, W, V, lista_interv){
 }
 
 
-#Los datos deben empezar en el primer periodo futuro (no observado)
 #Para unas distribuciones iniciales dadas, calcula las distribuciones de pronostico
 #hasta 'per_futuros' pasos
 pronosticos <- function(variables_F, per_futuros, at_0, Rt_0, G, W, St, nt,
@@ -193,7 +193,8 @@ pronosticos <- function(variables_F, per_futuros, at_0, Rt_0, G, W, St, nt,
               "Qt_k" = lista_Qt_k, "CI_inf" = lista_CI_inf, "CI_sup" = lista_CI_sup))
 }
 
-# Para todos los periodos aplica la funcion de pronosticos
+# Para todos los periodos aplica la funcion de pronosticos. Sirve para obtener
+# pronósticos pasados
 pronosticos_k_pasos <- function(prons_F, k, modelo, 
                                 lista_interv = NULL, per_anticip_interv = NULL){
   
@@ -237,7 +238,7 @@ pronosticos_k_pasos <- function(prons_F, k, modelo,
               "Qt_k" = lista_Qt_k, "CI_inf" = lista_CI_inf, "CI_sup" = lista_CI_sup))
 }
 
-
+# Calcula distribuciones filtradas
 suavizamiento_V_desc <- function(modelo){
 
   error_varianza <- function(x) {
