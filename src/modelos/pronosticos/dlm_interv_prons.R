@@ -153,8 +153,8 @@ R_34_int <- R_34
 R_34_int[1,1] <- R_34[1,1]*10
 R_34_int
 
-qst(c(0.025,0.975), nu = 33, mu = a_34[1,], sigma = sqrt(R_34[1,1]))
-qst(c(0.025,0.975), nu=33, mu = a_34_int[1,], sigma = sqrt(R_34_int[1,1]))
+qst(c(0.025,0.975), nu = 77, mu = a_34[1,], sigma = sqrt(R_34[1,1]))
+qst(c(0.025,0.975), nu = 77, mu = a_34_int[1,], sigma = sqrt(R_34_int[1,1]))
 
 list_interv <- list("t_int" = list(34),
                     "at_int" = list(a_34_int),
