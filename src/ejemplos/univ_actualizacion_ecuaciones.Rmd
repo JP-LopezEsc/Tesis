@@ -1,9 +1,7 @@
 ---
 title: "Actualizacion de ecuaciones univariada"
 output: pdf_document
-date: "2022-07-25"
 ---
-\fontsize{15}{15}
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -12,18 +10,17 @@ library(MASS)
 options(digits=4)
 ```
 
+Se utiliza la base de datos **freeny**.
+
 ```{r}
 #La base de datos freeny tiene la siguiente estructura:
 head(freeny)
 ```
 
-```{r}
-#m19 <- c(-2.3, 2.3, -0.7)
-#G20 <- matrix(c(1.001, 0, 0, 0, 1, 0, 0, 0, 1), ncol=3)
-```
+## Actualización de ecuaciones
 
-
-
+Se parte de la distribución posterior en $t=19$ y se obtiene la distribución 
+a priori en $t=20$.
 ```{r}
 #A. Posterior en t=19
 m19 <- c(1.5, 1.8, -0.7)
@@ -41,6 +38,8 @@ a20
 R20
 ```
 
+Con los valores de las variables explciativas se calculan el pronóstico y su 
+varianza.
 ```{r}
 freeny[20,]
 F20 <- c(1, 6.06093, 4.51018) #Variables explicativas en t=20. El 1 es para
@@ -54,13 +53,13 @@ f20
 Q20
 ```
 
-
-
+Intervalo del pronóstico.
 ```{r}
 c(qnorm(0.025, mean = f20, sd = sqrt(Q20)), qnorm(0.975, mean = f20,                                                 sd = sqrt(Q20)))
 ```
 
-
+Una vez que se observa el valor real, se calcula la distribución posterior 
+en $t$=20.
 ```{r}
 #Valor observado de Y20:
 Y20 <- 9.31378
@@ -74,9 +73,10 @@ C20
 ```
 
 
-Funcion para actualizar mas de un periodo
+Función para actualizar más de un periodo
 
 ```{r}
+# Se acomodan los datos en la estructura necesaria
 datos_ej <- freeny %>% 
   mutate(intercept = 1) %>% 
   slice(20:n()) %>% 
@@ -129,13 +129,12 @@ actualizacion <- function(datos, m0, C0, G, W, V){
 }
 ```
 
-
-
+Se aplica la función.
 ```{r}
 res_dlm <- actualizacion(datos_ej, m19, C19, G20, W20, V20)
 ```
 
-
+Se grafican los pronósticos a un paso y sus intervalos.
 ```{r}
 df_graficas <- data.frame("fecha" = datos_ej %>% row.names(), "y_real" = datos_ej$y, 
            "y_pronostico" = res_dlm$ft %>% unlist(), "CI_inf" = res_dlm$CI_inf %>% unlist(),
@@ -169,6 +168,7 @@ ggplot(data = df_graficas, aes(x = fecha)) +
 ggsave(filename = "graphs/teoria/actualizacion/actualizacion.png", width = 11.7, height = 6)
 ```
 
+Se grafican la evolución de los parámetros.
 ```{r}
 df_params <- data.frame(reduce(res_dlm$mt, cbind) %>% t(), fecha = df_graficas$fecha)  %>% 
   rename(Intercepto = X1, Ingreso = X2, Precio = X3) %>% 
@@ -176,7 +176,6 @@ df_params <- data.frame(reduce(res_dlm$mt, cbind) %>% t(), fecha = df_graficas$f
                cols = c(Intercepto, Ingreso, Precio))
 
 ```
-
 
 ```{r}
 ggplot(df_params, aes(x=fecha, y = valor)) +
@@ -194,7 +193,7 @@ ggsave(filename = "graphs/teoria/actualizacion/parametros.png", width = 11.7, he
 ```
 
 
-Pronosticos
+## Pronósticos a más de un paso.
 
 ```{r}
 freeny[21,]
@@ -204,7 +203,7 @@ freeny[21,]
 a20_0 <- m20
 R20_0 <- C20
 
-#k = 1
+#k = 1 (pronóstico a un paso)
 #Valores conocidos de F21, G21, V21 y W21
 F21 <- c(1, 6.07103, 4.50352)
 G21 <- matrix(c(1.001, 0, 0, 0, 1, 0, 0, 0, 1), ncol=3)
@@ -222,7 +221,7 @@ f20_1
 Q20_1
 
 freeny[22,]
-#k = 2
+#k = 2 (pronóstico a dos pasos)
 #Valores conocidos de F22, G22, V22 y W22
 F22 <- c(1, 6.08018, 4.4936)
 G22 <- matrix(c(1.001, 0, 0, 0, 1, 0, 0, 0, 1), ncol=3)
@@ -268,6 +267,7 @@ datos_ej_prons <- datos_ej[-1,]
 
 
 ```{r}
+# Se define una función para calcular los pronósticos a más de un paso
 #Los datos deben empezar en el primer periodo futuro (no observado)
 pronosticos <- function(datos, at_0, Rt_0, G, W, V){
   at_k<- at_0
@@ -302,10 +302,12 @@ pronosticos <- function(datos, at_0, Rt_0, G, W, V){
 }
 ```
 
+Se aplica la función.
 ```{r}
 pronos_dlm <- pronosticos(datos_ej_prons, m20, C20, G20, W20, V20)
 ```
 
+Se grafican los resultados.
 ```{r}
 df_pronos <- data.frame("fecha" = datos_ej_prons %>% row.names(), "y_real" = datos_ej_prons$y, 
            "y_pronostico" = pronos_dlm$ft_k %>% unlist(), 
@@ -340,20 +342,3 @@ ggplot(data = df_pronos, aes(x = fecha)) +
 ggsave(filename = "graphs/teoria/pronos/pronos.png", width = 11.7, height = 6)  
 ```
 
-
-```{r}
-df_params_pronos <- data.frame(reduce(pronos_dlm$at_k, cbind) %>% t(), fecha = df_pronos$fecha)  %>% 
-  rename(Intercepto = X1, Ingreso = X2, Precio = X3) %>% 
-  pivot_longer(names_to = "parametro", values_to = "valor", 
-               cols = c(Intercepto, Ingreso, Precio))
-```
-
-
-```{r}
-ggplot(df_params_pronos, aes(x=fecha, y = valor)) +
-  geom_line() +
-  facet_wrap(~parametro, nrow = 3, scales = "free") +
-  theme_bw()  +
-  ylab("Valor") +
-  xlab("Fecha")
-```

@@ -1,10 +1,8 @@
 ---
 title: "intervencion"
 output: pdf_document
-date: "2022-10-08"
 ---
 
-\fontsize{15}{15}
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(LaplacesDemon)
@@ -12,99 +10,36 @@ library(tidyverse)
 options(digits=4)
 ```
 
+Se utiliza la base de datos **freeny**.
+
+Se definen los valores iniciales en $t=20$.
 ```{r}
 #A. Posterior en t=19
-m19 <- c(1.5, 1.8, -0.7)
-C19 <- matrix(c(0.00002, 0.00001, -0.00002, 0.00001, 0.00003, -0.00001, -0.00002, 
-                -0.00001, 0.00002), ncol = 3)
-
+m19 <-c(1.5, 1.8,-0.7)
+C19 <- matrix(c(0.00002, 0.00001,-0.00002, 0.00001, 
+                0.00003,-0.00001,-0.00002,-0.00001, 0.00002), 
+              ncol = 3)
 #Valores conocidos de G20 y W20
-G20 <- matrix(c(1.001, 0, 0, 0, 1, 0, 0, 0, 1), ncol=3)
-G30 <- matrix(c(1.001, 0, 0, 0, 1, 0, 0, 0, 1), ncol=3)
-W20 <- matrix(c(0.00001, 0, 0, 0, 0.00001, -0.00001, 0, -0.00001, 0.00005), ncol=3)
-W30 <- matrix(c(0.00001, 0, 0, 0, 0.00001, -0.00001, 0, -0.00001, 0.00005), ncol=3)
-#B. Priori de parámetros en t=20
-a20 <- G20 %*% m19
-R20 <- G20 %*% C19 %*% t(G20) + W20
-a20
-R20
-
-a20_int <- c(1.501, 2.3, -0.7)
-R20_int <- matrix(c(3.004e-05, 1.001e-05, -2.002e-05, 1.001e-05, 0.005, 
-                    -2.000e-05, -2.002e-05, -2.000e-05, 7.000e-05), ncol = 3)
+G20 <-matrix(c(1.001, 0, 0, 0, 1, 0, 0, 0, 1), ncol=3)
+W20 <-matrix(c(0.00001, 0, 0, 0, 0.00001,-0.00001, 0,-0.00001, 0.00005), ncol=3)
+S19 <- 0.00005# Estimación de V en T=19
+n19 <- 19.5# Grados de libertad
 ```
 
 
+## Actualización de ecuaciones
+
+Función para actualizar más de un periodo cuando la varianza de observación
+es desconocida y se introduce una lista con las intervenciones deseadas.
 
 ```{r}
-F20 <- c(1, 6.06093, 4.51018) #Variables explicativas en t=20. El 1 es para
-                              #agregar el intercepto
-S19 <- 0.00005 # Estimación de V en T=19
-n19 <- 19.5 # Grados de libertad
-#C. Pronóstico a un periodo.
-f20 <- as.numeric(t(F20) %*% a20_int)
-Q20 <- as.numeric(t(F20) %*% R20_int %*% F20 + S19)
-f20
-Q20
-```
-
-```{r}
-c(qst(0.025, nu = n19, mu = f20, sigma = sqrt(Q20)),
-  qst(0.975, nu = n19, mu = f20, sigma = sqrt(Q20)))
-```
-
-```{r}
-#Valor observado de Y20:
-Y20 <- 11.6
-#D. Posterior en t=20
-A20 <- R20_int %*% F20 / Q20
-e20 <- Y20-f20
-m20 <- a20_int + A20 %*% e20
-n20 <- n19 + 1
-S20 <- S19 + (S19/n20)*(e20^2/Q20-1)
-C20 <- (S20/S19)*(R20_int-A20 %*% t(A20) * Q20)
-m20
-C20
-```
-
-Distribuciones filtradas
-
-```{r}
-#U20 <- chol(R20_int)
-#Z20 <- chol(R20)
-#K20 <- U20 %*% solve(Z20)
-#G20_int <- K20 %*% G20
-#W20_int <- K20 %*% W20 %*% t(K20)
-```
-
-
-```{r}
-#B19 <- C19 %*% t(G20_int) %*% solve(R20_int)
-#a20_menos_1 <- m19 + B19 %*% (m20 - a20_int)
-#R20_menos_1 <- C19 - B19 %*% (C20 - R20_int) %*% solve(B19)
-
-#a20_menos_1
-
-#S20/S19 * R20_menos_1
-```
-
-```{r}
-#F19 <- c(1, 6.05563	, 4.53957) #Variables explicativas en t=19. El 1 es para
-                              #agregar el intercepto
-#t(F19) %*% a20_menos_1
-
-#S20/S19 * t(F19) %*% R20_menos_1 %*% F19
-```
-
-Mas de una obs.
-
-```{r}
+# Se modifican los datos para ejemplificar la intervención
 datos_ej <- freeny %>% 
   mutate(intercept = 1) %>% 
   slice(20:n()) %>% 
   dplyr::select(y, intercept, income.level, price.index) %>% 
   mutate(y = ifelse(y>=9.6, y+0.5,y))
-#Metemos ruido
+#Metemos ruido para el ejemplo de la intervención
 set.seed(2)
 datos_ej$y[11:20] <- datos_ej$y[11:20] + rnorm(10,0,0.05)
 datos_ej
@@ -113,6 +48,7 @@ datos_ej
 
 ```{r}
 #Se asume que Gt, Vt y Wt son ctes conocidas para toda t.
+# lista_interv define el tiempo y los estados de las intervenciones
 actualizacion_V_desc <- function(datos, m0, C0, G, W, S0, n0, lista_interv){
   
   error_varianza <- function(x) {
@@ -188,10 +124,13 @@ actualizacion_V_desc <- function(datos, m0, C0, G, W, S0, n0, lista_interv){
 }
 ```
 
+Se aplica la función sin intervención definida.
+
 ```{r}
 res_dlm_no_int <- actualizacion_V_desc(datos_ej, m19, C19, G20, W20, S19, n19, list())
 ```
 
+Se define la intervención
 ```{r}
 a30_int <- res_dlm_no_int$at[[11]] %>% as_vector()
 a30_int[2] <- 1.9
@@ -201,12 +140,13 @@ list_interv <- list("t_int" = list(11), "at_int" = list(a30_int),
      "Rt_int" = list(R30_int))
 ```
 
+Se aplica la función con la intervención.
 ```{r}
 res_dlm <- actualizacion_V_desc(datos_ej, m19, C19, G20, W20, S19, n19, list_interv)
 list_interv$at_int[[match(11,list_interv$t_int)]]
 ```
 
-
+Se grafican los resultados del modelo intervenido.
 
 ```{r}
 df_graficas <- data.frame("fecha" = datos_ej %>% row.names(), "y_real" = datos_ej$y, 
@@ -279,12 +219,64 @@ ggplot(df_params, aes(x=fecha, y = valor)) +
 #ggsave(filename = "graphs/teoria/actualizacion/parametros.png", width = 11.7, height = 6)
 ```
 
-
+Ahora, se muestra paso por paso la actualización de ecuaciones con intervención.
+Se parte de la distribución posterior en $t=29$ y se obtiene la distribución 
+a priori en $t=30$. Se supone que la varianza de observación es deconocida.
+En este ejemplo, se realizó una intervención en $t=30$.
 
 ```{r}
-df_graficas_no_int <- data.frame("fecha" = datos_ej %>% row.names(), "y_real" = datos_ej$y, 
-           "y_pronostico" = res_dlm_no_int$ft %>% unlist(), "CI_inf" = res_dlm_no_int$CI_inf %>% unlist(),
-           "CI_sup" = res_dlm_no_int$CI_sup %>% unlist()) %>% 
+#Valores conocidos de G30 y W30 no son necesarios por la intervención
+
+#Priori de parámetros en t=30 intervenidos
+a30_int 
+R30_int 
+```
+
+
+Con los valores de las variables explciativas se calculan el pronóstico y su 
+varianza utilizando los valores de la intervención.
+```{r}
+F30 <- c(1, 6.14705, 4.38513) #Variables explicativas en t=30. El 1 es para
+                              #agregar el intercepto
+S29 <- res_dlm$St[[10]] # Estimación de V en T=29
+n29 <- 29.5 # Grados de libertad
+#C. Pronóstico a un periodo.
+f30 <- as.numeric(t(F30) %*% a30_int)
+Q30 <- as.numeric(t(F30) %*% R30_int %*% F30 + S29)
+f30
+Q30
+```
+
+Intervalo del pronóstico. En este caso las distribuciones son t de Student.
+```{r}
+c(qst(0.025, nu = n29, mu = f30, sigma = sqrt(Q30)),
+  qst(0.975, nu = n29, mu = f30, sigma = sqrt(Q30)))
+```
+
+Una vez que se observa el valor real, se calcula la distribución posterior 
+en $t$=30 y se reestima el valor de la varianza de observación desconocida.
+```{r}
+#Valor observado de Y30:
+Y30 <- 10.05563427
+#D. Posterior en t=20
+A30 <- R30_int %*% F30 / Q30
+e30 <- Y30-f30
+m30 <- a30_int + A30 %*% e30
+n30 <- n29 + 1
+S30 <- S29 + (S29/n30)*(e30^2/Q30-1)
+C30 <- (S30/S29)*(R30_int-A30 %*% t(A30) * Q30)
+m30
+C30
+```
+
+
+Se grafican los resultados del modelo no intervenido
+```{r}
+df_graficas_no_int <- data.frame("fecha" = datos_ej %>% row.names(), 
+                                 "y_real" = datos_ej$y, 
+                                 "y_pronostico" = res_dlm_no_int$ft %>% unlist(), 
+                                 "CI_inf" = res_dlm_no_int$CI_inf %>% unlist(),
+                                  "CI_sup" = res_dlm_no_int$CI_sup %>% unlist()) %>% 
   mutate(fecha = as.numeric(fecha))
 ```
 
@@ -315,7 +307,10 @@ ggplot(data = df_graficas_no_int, aes(x = fecha)) +
 ggsave(filename = "graphs/teoria/intervencion/actualizacion_no_interv.png", width = 11.7, height = 6)
 ```
 
+## Distribuciones filtradas
 
+Se define una función para calcular distribuciones filtradas más atrás de un
+periodo pasado cuando hubo intervenciones.
 ```{r}
 #Se pasan manualmente las G historicas en G, las de intervencion se calculan
 suavizamiento_V_desc <- function(datos, G, nt, lista_interv){
@@ -406,18 +401,18 @@ suavizamiento_V_desc <- function(datos, G, nt, lista_interv){
 }
 ```
 
-
-
+Se aplica la función con las intervenciones definidas anteriormente.
 ```{r}
 res_dlm_suav <- suavizamiento_V_desc(datos_ej, G20, 39.5, list_interv)
 ```
 
-
-
+Se grafican los resultados.
 ```{r}
-df_graficas_suav <- data.frame("fecha" = datos_ej %>% row.names(), "y_real" = datos_ej$y, 
-           "resp_media" = res_dlm_suav$ft_k_filt %>% unlist(), "CI_inf" = res_dlm_suav$CI_inf %>% unlist(),
-           "CI_sup" = res_dlm_suav$CI_sup %>% unlist()) %>% 
+df_graficas_suav <- data.frame("fecha" = datos_ej %>% row.names(), 
+                               "y_real" = datos_ej$y, 
+                               "resp_media" = res_dlm_suav$ft_k_filt %>% unlist(), 
+                               "CI_inf" = res_dlm_suav$CI_inf %>% unlist(),
+                               "CI_sup" = res_dlm_suav$CI_sup %>% unlist()) %>% 
   mutate(fecha = as.numeric(fecha))
 ```
 
@@ -449,59 +444,17 @@ ggsave(filename = "graphs/teoria/intervencion/suavizamiento_interv.png", width =
 ```
 
 
-Paso a paso
+Se muestra paso por paso cómo calcular las distribuciones filtradas cuando hubo
+una intervención. Se supone que pasaron los años y nos encontramos en $t=39$. 
+El objetivo es obtener las distribuciones filtradas de los estados en $t=29$ cuando 
+hubo una intervención en $t=30$ dada la información en $t=39$.
 
 
+Primero hay que obtener $G_{30}^*$ y $W_{30}^*$ para que la ecuación de evolución 
+coincida con la intervención.
 ```{r}
-
-#Valores conocidos de G30 y W30 no son necesarios por la intervención
-
-#B. Priori de parámetros en t=30 intervenidos
-
-a30_int 
-R30_int 
-```
-
-
-
-```{r}
-F30 <- c(1, 6.14705, 4.38513) #Variables explicativas en t=30. El 1 es para
-                              #agregar el intercepto
-S29 <- res_dlm$St[[10]] # Estimación de V en T=29
-n29 <- 29.5 # Grados de libertad
-#C. Pronóstico a un periodo.
-f30 <- as.numeric(t(F30) %*% a30_int)
-Q30 <- as.numeric(t(F30) %*% R30_int %*% F30 + S29)
-f30
-Q30
-```
-
-```{r}
-c(qst(0.025, nu = n29, mu = f30, sigma = sqrt(Q30)),
-  qst(0.975, nu = n29, mu = f30, sigma = sqrt(Q30)))
-```
-
-```{r}
-#Valor observado de Y30:
-Y30 <- 10.05563427
-#D. Posterior en t=20
-A30 <- R30_int %*% F30 / Q30
-e30 <- Y30-f30
-m30 <- a30_int + A30 %*% e30
-n30 <- n29 + 1
-S30 <- S29 + (S29/n30)*(e30^2/Q30-1)
-C30 <- (S30/S29)*(R30_int-A30 %*% t(A30) * Q30)
-m30
-C30
-```
-
-
-Distribuciones filtradas
-
-.
-.
-
-```{r}
+G30 <-matrix(c(1.001, 0, 0, 0, 1, 0, 0, 0, 1), ncol=3)
+W30 <-matrix(c(0.00001, 0, 0, 0, 0.00001,-0.00001, 0,-0.00001, 0.00005), ncol=3)
 R30 <- res_dlm_no_int$Rt[[11]]
 # La descomposicion de Cholesky en R devuelve una triangular superior. Se transpone
 # para hacerla triangular inferior para que coincida con la teoría presentada
@@ -512,7 +465,8 @@ G30_int <- K30 %*% G30
 W30_int <- K30 %*% W30 %*% t(K30)
 ```
 
-
+Se aplica el procedimiento usual para obtener las distribuciones filtradas en $t=29$, 
+pero se usan los valores de **G30_int** y **W30_int**.
 ```{r}
 C29 <- res_dlm$Ct[[10]]
 m29 <- res_dlm$mt[[10]]
@@ -529,6 +483,8 @@ S39 <- res_dlm$St[[20]] # Estimación de V en T=39
 S39/S29 * R39_menos_10
 ```
 
+Ahora se obtiene la respuesta media en $t=29$ dada la información en $t=39$.
+
 ```{r}
 F29 <- c(1, 6.131, 4.398) #Variables explicativas en t=29. 
 t(F29) %*% a39_menos_10
@@ -536,19 +492,6 @@ t(F29) %*% a39_menos_10
 S39/S29 * t(F29) %*% R39_menos_10 %*% F29
 ```
 
-
-
-```{r}
-U30 %*% t(U30)
-Z30 %*% t(Z30)
-
-a30 <- res_dlm_no_int$at[[11]] %>% as_vector()
-h30 <- a30_int -K30 %*% a30
-K30 %*% a30 + h30
-
-K30 %*% R30 %*% t(K30)
-R30_int
-```
 
 
 

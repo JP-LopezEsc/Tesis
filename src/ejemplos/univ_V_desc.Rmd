@@ -1,15 +1,21 @@
 ---
 title: "Actualizacion de ecuacion V desconocida"
 output: pdf_document
-date: "2022-08-17"
 ---
-\fontsize{15}{15}
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(LaplacesDemon)
 options(digits=4)
 ```
+
+Se utiliza la base de datos **freeny**.
+
+## Actualización de ecuaciones
+
+Se parte de la distribución posterior en $t=19$ y se obtiene la distribución 
+a priori en $t=20$.
 
 ```{r}
 #A. Posterior en t=19
@@ -29,7 +35,8 @@ R20
 ```
 
 
-
+Con los valores de las variables explciativas se calculan el pronóstico y su 
+varianza.
 ```{r}
 freeny[20,]
 F20 <- c(1, 6.06093, 4.51018) #Variables explicativas en t=20. El 1 es para
@@ -43,12 +50,14 @@ f20
 Q20
 ```
 
-
+Intervalo del pronóstico.En este caso las distribuciones son t de Student.
 ```{r}
 c(qst(0.025, nu = n19, mu = f20, sigma = sqrt(Q20)),
   qst(0.975, nu = n19, mu = f20, sigma = sqrt(Q20)))
 ```
 
+Una vez que se observa el valor real, se calcula la distribución posterior 
+en $t$=20 y se reestima el valor de la varianza de observación desconocida.
 ```{r}
 #Valor observado de Y20:
 Y20 <- 9.31378
@@ -63,6 +72,8 @@ m20
 C20
 ```
 
+Función para actualizar más de un periodo cuando la varianza de observación
+es desconocida.
 
 ```{r}
 datos_ej <- freeny %>% 
@@ -126,12 +137,12 @@ actualizacion_V_desc <- function(datos, m0, C0, G, W, S0, n0){
 }
 ```
 
-
+Se aplica la función.
 ```{r}
 res_dlm <- actualizacion_V_desc(datos_ej, m19, C19, G20, W20, S19, n19)
 ```
 
-
+Se grafican los pronósticos a un paso y sus intervalos.
 ```{r}
 df_graficas <- data.frame("fecha" = datos_ej %>% row.names(), "y_real" = datos_ej$y, 
            "y_pronostico" = res_dlm$ft %>% unlist(), "CI_inf" = res_dlm$CI_inf %>% unlist(),
@@ -166,7 +177,7 @@ ggplot(data = df_graficas, aes(x = fecha)) +
 ggsave(filename = "graphs/teoria/V desc/actualizacion.png", width = 11.7, height = 6)
 ```
 
-
+Se grafican la evolución de los parámetros.
 ```{r}
 df_params <- data.frame(reduce(res_dlm$mt, cbind) %>% t(), fecha = df_graficas$fecha)  %>% 
   rename(Intercepto = X1, Ingreso = X2, Precio = X3) %>% 
@@ -183,6 +194,7 @@ ggplot(df_params, aes(x=fecha, y = valor)) +
   xlab("Fecha")
 ```
 
+Se grafica la evolución de la estimación de la varianza de observación.
 ```{r}
 df_St <- data.frame(res_dlm$St %>% unlist(), fecha = df_graficas$fecha) %>% 
   rename(St = 1)
@@ -203,33 +215,11 @@ ggsave(filename = "graphs/teoria/V desc/St.png", width = 11.7, height = 6)
 ```
 
 
-Distribuciones filtradas
+## Distribuciones filtradas
 
-```{r}
-B19 <- C19 %*% t(G20) %*% solve(R20)
-a20_menos_1 <- m19 + B19 %*% (m20 - a20)
-R20_menos_1 <- C19 + B19 %*% (C20 - R20) %*% t(B19)
-
-a20_menos_1
-
-S20/S19 * R20_menos_1
-```
-
-
-```{r}
-freeny[19,]
-```
-
-
-```{r}
-F19 <- c(1, 6.05563	, 4.53957) #Variables explicativas en t=19. El 1 es para
-                              #agregar el intercepto
-t(F19) %*% a20_menos_1
-
-S20/S19 * t(F19) %*% R20_menos_1 %*% F19
-```
-
-
+Se supone que pasaron los años y nos encontramos en $t=39$. El objetivo es obtener
+las distribuciones filtradas de los estados en $t=38$ dada la información en
+$t=39$.
 
 ```{r}
 #Se supondrá que estaremos en el observacion t=39
@@ -248,12 +238,10 @@ a39_menos_1 <- m38 + B38 %*% (m39 - a39)
 R39_menos_1 <- C38 + B38 %*% (C39 - R39) %*% t(B38)
 a39_menos_1 
 
-#
-#
-
-#
 S39/S38 *R39_menos_1
 ```
+
+Ahora se obtiene la respuesta media en $t=38$ dada la información en $t=39$.
 
 ```{r}
 freeny[38,]
@@ -263,7 +251,8 @@ t(F38) %*% a39_menos_1
 S39/S38 * (t(F38) %*% R39_menos_1 %*% F38)
 ```
 
-
+Se define una función para calcular dsitribuciones filtradas más atrás de un
+periodo pasado.
 ```{r}
 suavizamiento_V_desc <- function(datos, G, nt){
   
@@ -325,11 +314,12 @@ suavizamiento_V_desc <- function(datos, G, nt){
 }
 ```
 
+Se aplica la función dada la información en $t=39$.
 ```{r}
 suav_dlm <- suavizamiento_V_desc(datos_ej, G39, 39.5)
 ```
 
-
+Se grafican los resultados.
 
 ```{r}
 df_graficas_suav <- data.frame("fecha" = datos_ej %>% row.names(), "y_real" = datos_ej$y, 
