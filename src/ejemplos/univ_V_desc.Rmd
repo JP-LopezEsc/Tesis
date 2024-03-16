@@ -213,6 +213,11 @@ ggplot(df_St, aes(x=fecha, y = St)) +
 
 ggsave(filename = "graphs/teoria/V desc/St.png", width = 11.7, height = 6)
 ```
+Intervalo en t=30
+
+```{r}
+res_dlm$CI[[11]]
+```
 
 
 ## Distribuciones filtradas
